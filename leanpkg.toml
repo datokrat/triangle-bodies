@@ -1,0 +1,8 @@
+[package]
+name = "triangle-bodies"
+version = "0.1"
+lean_version = "leanprover-community/lean:3.45.0"
+path = "src"
+
+[dependencies]
+mathlib = {git = "https://github.com/leanprover-community/mathlib", rev = "87861dd77c05376759256369ed1649d485063c28"}

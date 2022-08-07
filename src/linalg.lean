@@ -14,6 +14,10 @@ local attribute [instance] prop_decidable
 
 variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
+
+noncomputable def vector_orth (u : V) : submodule ℝ V :=
+(submodule.span ℝ ({u} : set V))ᗮ
+
 noncomputable abbreviation dim := finite_dimensional.finrank ℝ
 abbreviation diff (A : set V) := A -ᵥ A
 
@@ -556,6 +560,29 @@ lemma ker_of_complementary_orthogonal_projection (E : submodule ℝ V) : (proj E
 begin
   conv {to_rhs, rw [←submodule.orthogonal_orthogonal E]},
   apply ker_of_orthogonal_projection,
+end
+
+lemma surjective_orthogonal_projection (E : submodule ℝ V): function.surjective (proj E) :=
+begin
+  rintro e,
+  refine ⟨e, _⟩,
+  simp only [proj, continuous_linear_map.to_linear_map_eq_coe, continuous_linear_map.coe_coe,
+  orthogonal_projection_mem_subspace_eq_self],
+end
+
+lemma range_of_orthogonal_projection (E : submodule ℝ V): (proj E).range = ⊤ :=
+begin
+  apply linear_map.range_eq_top.mpr,
+  simp only [proj, continuous_linear_map.to_linear_map_eq_coe, continuous_linear_map.coe_coe],
+  apply surjective_orthogonal_projection,
+end
+
+lemma dim_add_dim_orthogonal (E : submodule ℝ V) :
+dim E + dim Eᗮ = dim V :=
+begin
+  have : dim E = dim (⊤ : submodule ℝ E) := finrank_top.symm,
+  rw [←ker_of_orthogonal_projection E, this, ←range_of_orthogonal_projection E],
+  apply linear_map.finrank_range_add_finrank_ker,
 end
 
 def submodule_inclusion (W : submodule ℝ V) : W →ₗ[ℝ] V :=

@@ -245,3 +245,25 @@ begin
             },
   end
 end
+
+def semicritical_spaces (C : multiset (submodule ℝ V)) :=
+  ∀ τ, τ ≤ C → dim τ.sum ≥ τ.card
+
+def subcritical_spaces (C : multiset (submodule ℝ V)) :=
+  C.card > 0 ∧ ∃ τ, τ ≤ C ∧ dim τ.sum ≤ τ.card
+
+lemma nonempty_of_subcritical_spaces {C : multiset (submodule ℝ V)}
+(h : subcritical_spaces C):
+C.card > 0 := h.1
+
+lemma semicritical_switching
+(C : multiset (submodule ℝ V × submodule ℝ V))
+(E : submodule ℝ V)
+(C1sc : semicritical_spaces (C.map prod.fst))
+(hE : dim E = C.card)
+(hCE : multiset_all (λ x : submodule ℝ V × submodule ℝ V, x.fst ≤ E ∧ x.snd ≤ E) C)
+(hne : ∀ x : submodule ℝ V × submodule ℝ V, x ∈ C → prod.snd x ≠ 0):
+∃ A B : multiset (submodule ℝ V × submodule ℝ V), A ≤ B ∧ B ≤ C ∧
+semicritical_spaces ((B.map prod.snd) + ((C - B).map prod.fst)) ∧
+dim (A.map prod.snd).sum = A.card ∧
+A.card > 0 := sorry

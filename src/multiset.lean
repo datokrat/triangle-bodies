@@ -68,3 +68,6 @@ lemma multiset_split_le {C D F : multiset α}
 begin
   exact multiset_split_le' C D h
 end
+
+def multiset_all {α : Type} (p : α → Prop) (C : multiset α) : Prop :=
+∀ a : α, a ∈ C → p a

@@ -269,7 +269,7 @@ dim (A.map prod.snd).sum = A.card ∧
 A.card > 0 := sorry
 
 lemma semicritical_of_le
-(C D : multiset (submodule ℝ V))
+{C D : multiset (submodule ℝ V)}
 (h : C ≤ D)
 (hsc : semicritical_spaces D) :
 semicritical_spaces C := sorry

@@ -65,7 +65,7 @@ submodule.span ℝ K.val.val -/
 
 noncomputable def span_of_convex_body
 (K : convex_body V) : submodule ℝ V :=
-submodule.span ℝ K.val
+vector_span ℝ K.val
 
 instance pmetric_convex_body : pseudo_metric_space (convex_body V) :=
 sorry

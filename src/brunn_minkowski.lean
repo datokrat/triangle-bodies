@@ -110,4 +110,7 @@ lemma area_continuous
 : filter.tendsto (λ n, area (C1 n ::ₘ C)) filter.at_top (𝓝 (area (C1lim ::ₘ C))) :=
 sorry
 
+lemma area_empty : msupport (area (0 : multiset (convex_body V))) = ⊤ :=
+sorry
+
 end bm

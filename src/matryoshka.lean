@@ -140,15 +140,53 @@ def pair_to_default_measure {k : ℕ}
 (pair : microid_pair k u) : microid_measure V k :=
 dirac_microid_measure pair.2.1
 
+noncomputable def pair_to_TS {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) : submodule ℝ V :=
+TS (microid_of_measure (pair_to_measure pair)).val u
+
+lemma proj_microid_of_measure {k : ℕ}
+(E : submodule ℝ V)
+(μ : microid_measure V k) :
+proj_body E (microid_of_measure μ) = microid_of_measure (project_microid_measure E μ) :=
+sorry
+
+def reduce_pair {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) : microid_pair k u :=
+⟨pair_to_default_measure pair, ⟨pair.2.1, sorry⟩⟩
+
+lemma reduced_microid_subset_TS {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) :
+(pair_to_microid (reduce_pair pair)).val ⊆ pair_to_TS (reduce_pair pair) := sorry
+
+lemma reduced_microid_eq_default_body {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) :
+(pair_to_microid (reduce_pair pair)) = pair_to_default_body pair := sorry
+
+lemma span_reduced_microid_eq_TS {k : ℕ}
+{u : metric.sphere (0 : V) 1} :
+span_of_convex_body ∘ pair_to_microid ∘ (reduce_pair : microid_pair k u → microid_pair k u) =
+pair_to_TS ∘ (reduce_pair : microid_pair k u → microid_pair k u) := sorry
+
 noncomputable def pair_to_default_space {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : submodule ℝ V :=
 TS (pair_to_default_body pair).val u.val
 
-noncomputable def pair_to_TS {k : ℕ}
+lemma default_space_eq_TS_of_reduced {k : ℕ}
 {u : metric.sphere (0 : V) 1}
-(pair : microid_pair k u) : submodule ℝ V :=
-TS (microid_of_measure (pair_to_measure pair)).val u
+(pair : microid_pair k u) :
+pair_to_default_space (reduce_pair pair) = pair_to_TS (reduce_pair pair) :=
+sorry
+
+lemma TS_reduce_eq_default_space {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) :
+pair_to_TS (reduce_pair pair) = pair_to_default_space pair :=
+sorry
 
 noncomputable def pair_to_space_pair {k : ℕ}
 {u : metric.sphere (0 : V) 1}
@@ -210,6 +248,12 @@ begin
   },
 end
 
+lemma le_sum_multiset_of_mem
+{C : multiset (submodule ℝ V)}
+{E : submodule ℝ V}
+(h : E ∈ C) :
+E ≤ C.sum := sorry
+
 lemma semicritical_spaces_factorization
 (C D : multiset (submodule ℝ V))
 {E : submodule ℝ V}
@@ -255,17 +299,25 @@ u.val ∈ Eᗮ := sorry
 lemma semicritical_subprojection
 {k : ℕ}
 {u : metric.sphere (0 : V) 1}
-{A B : multiset (microid_pair k u)}
-{E : submodule ℝ V}
+(A B : multiset (microid_pair k u))
+(E : submodule ℝ V)
+(SP : multiset (microid_measure Eᗮ k))
 (hAE : E = (A.map pair_to_TS).sum)
 (hA1 : multiset_all (λ x, pair_to_default_space x = pair_to_TS x) A)
 (hA2 : dim E = A.card)
-(hB : semicritical_spaces ((A + B).map pair_to_TS)) :
+(hB : semicritical_spaces ((A + B).map pair_to_TS))
+(hSP : SP = B.map (project_microid_measure Eᗮ ∘ pair_to_measure)):
 semicritical_spaces
-(B.map (TS_microid_measure (uncoe_sph Eᗮ u (u_mem_sum_TS_orth A hAE)) ∘ project_microid_measure Eᗮ ∘ pair_to_measure)) := sorry
+(SP.map (TS_microid_measure (uncoe_sph Eᗮ u (u_mem_sum_TS_orth A hAE)))) := sorry
 
 end blabb
 
+lemma coe_uncoe_sph {E : submodule ℝ V}
+(u : metric.sphere (0 : V) 1)
+(uE : u.val ∈ E) :
+coe_sph E (uncoe_sph E u uE) = u := sorry
+
+--set_option pp.implicit true
 theorem matryoshka_principle {k : ℕ}
 (n₀ : ℕ)
 (n : ℕ)
@@ -280,7 +332,11 @@ u ∈ msupport (bm.area (μs.map microid_of_measure)) :=
 begin
   unfreezingI {
     induction n₀ with n₀ ih generalizing n μs V,
-    {admit},
+    {
+      have : μs = ∅ := sorry,
+      rw [this],
+      simp only [multiset.empty_eq_zero, multiset.map_zero, bm.area_empty],
+    },
     {
       rcases exists_pair_multiset μs u hTS with
         ⟨C, rfl⟩,
@@ -294,7 +350,27 @@ begin
           simpa only [multiset.map_map] using hTS,
         },
         {
-          have dim_uperp : dim uperp = n := sorry,
+          have dim_uperp : dim uperp = n,
+          {
+            suffices h : dim uperp + 1 = dim V,
+            {
+              rw [hdim2] at h,
+              exact nat.add_right_cancel h,
+            },
+            {
+              have : dim (submodule.span ℝ ({u} : set V)) = 1,
+              {
+                apply finrank_span_singleton,
+                have := metric.mem_sphere.mp u.prop,
+                have z_ne_o: 1 ≠ (0 : ℝ) := zero_ne_one.symm,
+                rw [←this] at z_ne_o,
+                apply dist_ne_zero.mp z_ne_o,
+              },
+              rw [←this],
+              rw [nat.add_comm],
+              refine dim_add_dim_orthogonal _,
+            },
+          },
           symmetry,
           simpa only [dim_uperp, multiset.card_map] using hdim3,
         },
@@ -326,7 +402,7 @@ begin
       rcases h with ⟨hAB, hBD, h1, h2, h3⟩,
       rcases multiset_exists_of_le_map hBD with ⟨B', ⟨hB'C, rfl⟩⟩,
       rcases multiset_exists_of_le_map hAB with ⟨A', ⟨hA'B', rfl⟩⟩,
-      let F := (B' - A').map pair_to_default_measure + (C - B').map pair_to_measure,
+      /- let F := (B' - A').map pair_to_default_measure + (C - B').map pair_to_measure,
       let G := A'.map pair_to_default_measure,
       let E : submodule ℝ V := (A'.map pair_to_default_space).sum,
       have uE : u.val ∈ Eᗮ,
@@ -345,8 +421,8 @@ begin
           rcases hW with ⟨a, hA, rfl⟩,
           apply TS_le_uperp,
         },
-      },
-      let pF := F.map (project_microid_measure Eᗮ),
+      }, -/
+      /- let pF := F.map (project_microid_measure Eᗮ),
       let n' := pF.card,
       have hn' : n' ≤ n₀,
       {
@@ -434,8 +510,79 @@ begin
         },
       },
       have hdim3' : pF.card = n' := rfl,
-      let u' := uncoe_sph Eᗮ u uE,
-      have Fsc : semicritical_spaces (pF.map (TS_microid_measure u')),
+      let u' := uncoe_sph Eᗮ u uE, -/
+      let A := A'.map reduce_pair,
+      let B := (B' - A').map reduce_pair + (C - B'),
+      let E := (A.map pair_to_TS).sum,
+      let SP := B.map (project_microid_measure Eᗮ ∘ pair_to_measure),
+      have sc_AB : semicritical_spaces ((A + B).map pair_to_TS),
+      {
+        have hA : A.map pair_to_TS = A'.map pair_to_default_space,
+        {simp only [multiset.map_map, function.comp_app, TS_reduce_eq_default_space]},
+        have hB : B.map pair_to_TS = (B' - A').map pair_to_default_space + (C - B').map pair_to_TS,
+        {
+          simp only [B, multiset.map_map, multiset.map_add, function.comp_app,
+            TS_reduce_eq_default_space],
+        },
+        have hAB : (A + B).map pair_to_TS = B'.map pair_to_default_space + (C - B').map pair_to_TS,
+        {
+          rcases multiset.le_iff_exists_add.mp hA'B' with ⟨t, rfl⟩,
+          rcases multiset.le_iff_exists_add.mp hB'C with ⟨tt, rfl⟩,
+          simp only [A, B, add_tsub_cancel_left, multiset.map_map, multiset.map_add,
+            function.comp_app, TS_reduce_eq_default_space, add_assoc],
+        },
+        rw [hAB],
+        rcases multiset.le_iff_exists_add.mp hA'B' with ⟨t, rfl⟩,
+        rcases multiset.le_iff_exists_add.mp hB'C with ⟨tt, rfl⟩,
+        simp only [add_tsub_cancel_left] at hAB ⊢,
+        simp only [D, pair_to_space_pair_def] at h1,
+        simpa only [multiset.map_add, multiset.map_map, add_tsub_cancel_left,
+          function.comp_app] using h1,
+      },
+      have dimE : dim E = A.card,
+      {
+        rw [multiset.card_map] at h2 ⊢,
+        rw [←h2],
+        suffices h : E = ((A'.map pair_to_space_pair).map prod.snd).sum,
+        {rw [h]},
+        {
+          simp only [multiset.map_map, E, pair_to_space_pair_def,
+            function.comp_app, TS_reduce_eq_default_space],
+        },
+      },
+      have sc_sp :=
+      begin
+        refine semicritical_subprojection A B E SP rfl _ dimE sc_AB rfl,
+        {
+          intros x hx,
+          rcases multiset.mem_map.mp hx with ⟨y, hy, rfl⟩,
+          apply default_space_eq_TS_of_reduced,
+        },
+      end,
+      have cardSP : A.card + SP.card = n,
+      {
+        simp only [multiset.card_map, map_add],
+        rcases multiset.le_iff_exists_add.mp hA'B' with ⟨t, rfl⟩,
+        rcases multiset.le_iff_exists_add.mp hB'C with ⟨tt, rfl⟩,
+        simp only [add_tsub_cancel_left],
+        simpa only [multiset.card_map, multiset.card_add, add_assoc] using hdim3,
+      },
+      have dimEp : dim Eᗮ = SP.card + 1,
+      {
+        have rn := dim_add_dim_orthogonal E,
+        rw [hdim2, ←cardSP, dimE, add_assoc] at rn,
+        zify at rn ⊢,
+        exact add_left_cancel rn,
+      },
+      have cardSPle : SP.card ≤ n₀,
+      {
+        have cardAgt : A.card > 0 := by simpa only [multiset.card_map] using h3,
+        rw [←cardSP] at hn,
+        apply nat.le_of_lt_succ,
+        refine nat.lt_of_lt_of_le _ hn,
+        simpa only [lt_add_iff_pos_left] using cardAgt,
+      },
+      /- have Fsc : semicritical_spaces (pF.map (TS_microid_measure u')),
       {
         simp only [multiset.map_map, function.comp_app],
         simp only [u', TS_microid_proj_eq_proj_TS_microid _ Eᗮ u uE],
@@ -450,28 +597,94 @@ begin
             rw [TS_default_body_eq_TS_default_measure k u],
           }
         }
-      },
-      have finp := ih n' hn' pF u' hdim2' hdim3' Fsc,
-      clear ih,
+      }, -/
+      have finp := ih SP.card cardSPle SP _ dimEp rfl sc_sp,
+      clear ih hTS hn hAB hBD h2 h3 h1 sc_sp,
 
       have hE : E ≤ ⊤ := le_top,
-      let F' := F.map microid_of_measure,
-      let H' := A'.map pair_to_default_body,
-      have dimE : bm.is_vol_coll H' E := sorry,
-      have dimV : bm.is_area_coll (H' + F') ⊤ := sorry,
-      have H'sc : semicritical_spaces (H'.map span_of_convex_body) := sorry,
-      have heq := bm.factorize_area dimE dimV hE H'sc,
-      have tmp : multiset.map microid_of_measure pF = proj_coll Eᗮ F' := sorry,
+      let Am := A.map pair_to_microid,
+      let Bm := B.map pair_to_microid,
+      have vc : bm.is_vol_coll Am E,
+      {
+        split,
+        {simpa only [multiset.card_map, Am] using dimE},
+        {
+          simp only [Am, multiset.map_map],
+          intros K hK,
+          rcases multiset.mem_map.mp hK with ⟨x, hx, rfl⟩,
+          simp only [E],
+          have : convex_body_subset (pair_to_TS (reduce_pair x)) ((pair_to_microid ∘ reduce_pair) x) :=
+          begin
+            apply reduced_microid_subset_TS,
+          end,
+          refine subset_trans this _,
+          apply set_like.coe_subset_coe.mpr,
+          refine le_sum_multiset_of_mem _,
+          apply multiset.mem_map.mpr,
+          refine ⟨reduce_pair x, _, rfl⟩,
+          apply multiset.mem_map.mpr,
+          exact ⟨x, hx, rfl⟩,
+        },
+      },
+      have ac : bm.is_area_coll (Am + Bm) ⊤,
+      {
+        split,
+        {
+          change finite_dimensional.finrank ℝ (⊤ : submodule ℝ V) = (Am + Bm).card + 1,
+          rw [finrank_top],
+          change dim V = (Am + Bm).card + 1,
+          rw [hdim2],
+          simp only [multiset.card_add, multiset.card_map, add_left_inj],
+          rcases multiset.le_iff_exists_add.mp hA'B' with ⟨t, rfl⟩,
+          rcases multiset.le_iff_exists_add.mp hB'C with ⟨tt, rfl⟩,
+          rw [add_tsub_cancel_left],
+          rw [add_tsub_cancel_left],
+          rw [←add_assoc],
+          symmetry,
+          simp only [multiset.card_map, multiset.card_add] at hdim3,
+          assumption,
+        },
+        {
+          intros K hK,
+          simp only [convex_body_subset, submodule.top_coe, set.subset_univ],
+        },
+      },
+      have sc : semicritical_spaces (Am.map span_of_convex_body),
+      {
+        simp only [multiset.map_map, Am, A],
+        rw [span_reduced_microid_eq_TS, ←multiset.map_map],
+        have : A.map pair_to_TS ≤ (A + B).map pair_to_TS,
+        {simp only [multiset.map_add, le_add_iff_nonneg_right, zero_le]},
+        exact semicritical_of_le this sc_AB,
+      },
+      have heq := bm.factorize_area vc ac hE sc,
+      have tmp : multiset.map microid_of_measure SP = proj_coll Eᗮ Bm,
+      {
+        simp only [SP, Bm, proj_coll, multiset.map_map, pair_to_microid],
+        simp only [function.comp_app],
+        simp only [proj_microid_of_measure Eᗮ], -- rw does not work because of lambda!
+      },
       have finp' := set.mem_image_of_mem (coe_sph Eᗮ) finp,
-      rw [tmp, ←heq] at finp',
+      rw [tmp, ←heq, coe_uncoe_sph] at finp',
 
-      have uu' : coe_sph Eᗮ u' = u := sorry,
-      have : H' + F' = B'.map pair_to_default_body + (C - B').map pair_to_microid := sorry,
-      rw [this, uu'] at finp',
-      have := matryoshka_reduction (sorry : dim V = C.card + 1) finp',
-      simp only [multiset.map_map],
-      simp only [pair_to_microid] at this,
-      assumption,
+      have : Am + Bm = B'.map pair_to_default_body + (C - B').map pair_to_microid,
+      {
+        simp only [Am, Bm, A, B, multiset.map_add, multiset.map_map],
+        rw [←add_assoc],
+        congr,
+        rw [←multiset.map_add],
+        simp only [function.comp_app, reduced_microid_eq_default_body],
+        rcases multiset.le_iff_exists_add.mp hA'B' with ⟨t, rfl⟩,
+        simp only [add_tsub_cancel_left],
+      },
+      rw [this] at finp',
+      have : dim V = C.card + 1,
+      {
+        symmetry,
+        simpa only [multiset.card_map, hdim2, add_left_inj] using hdim3,
+      },
+      have := matryoshka_reduction this finp',
+      simpa only [multiset.map_map, pair_to_microid] using this,
     }
   }
 end

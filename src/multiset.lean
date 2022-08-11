@@ -1,5 +1,9 @@
-import data.multiset.basic
+import data.multiset.basic data.real.basic
 import tactic.wlog
+
+-- needed to get decidable_eq for sets!
+open classical
+local attribute [instance] prop_decidable
 
 variables {α : Type}
 
@@ -71,3 +75,69 @@ end
 
 def multiset_all {α : Type} (p : α → Prop) (C : multiset α) : Prop :=
 ∀ a : α, a ∈ C → p a
+
+lemma ex_multiset_argmax {α : Type} (f : α → ℝ) {m : multiset α} (hm : m ≠ 0) :
+∃ a ∈ m, ∀ b ∈ m, f a ≥ f b :=
+begin
+  induction m using pauls_multiset_induction,
+  {contradiction},
+  {
+    by_cases hz : m_C' = 0,
+    {
+      rw [hz],
+      refine ⟨m_a, multiset.mem_cons_self _ _, _⟩,
+      simp only [multiset.mem_cons, multiset.not_mem_zero, or_false,
+        ge_iff_le, forall_eq],
+    },
+    {
+      rcases m_ᾰ hz with ⟨z, ⟨zmem, zprop⟩⟩,
+      by_cases hle : f z ≤ f m_a,
+      {
+        refine ⟨m_a, multiset.mem_cons_self _ _, _⟩,
+        intros b hb,
+        rcases multiset.mem_cons.mp hb with ⟨-, -⟩,
+        {apply le_refl},
+        {exact le_trans (zprop b h) hle},
+      },
+      {
+        refine ⟨z, multiset.mem_cons_of_mem zmem, _⟩,
+        intros b hb,
+        rcases multiset.mem_cons.mp hb with ⟨-, -⟩,
+        {apply le_of_not_ge hle},
+        {exact zprop b h},
+      },
+    },
+  },
+end
+
+
+lemma multiset_exists_of_le_map {α β : Type} {f : α → β} {b : multiset β} {l : multiset α} :
+b ≤ multiset.map f l → ∃ as : multiset α, as ≤ l ∧ multiset.map f as = b :=
+begin
+  induction b,
+  begin
+    induction b generalizing l,
+    begin
+      simp,
+    end,
+    begin
+      intro h,
+      simp only [multiset.quot_mk_to_coe''] at *,
+      rw [←multiset.cons_coe] at *,
+      have := multiset.mem_of_le h (multiset.mem_cons_self b_hd b_tl),
+      simp only [multiset.mem_map] at this,
+      rcases this with ⟨a, ⟨a_mem_l, a_to_b_hd⟩⟩,
+      rcases (multiset.exists_cons_of_mem a_mem_l) with ⟨l_tl, rfl⟩,
+      simp only [multiset.map_cons, a_to_b_hd] at h,
+      have := multiset.erase_le_erase b_hd h,
+      simp only [multiset.erase_cons_head] at this,
+      rcases b_ih this with ⟨as_tl, ⟨hle, heq⟩⟩,
+      apply exists.intro (a ::ₘ as_tl),
+      simp only [multiset.cons_le_cons_iff, hle, multiset.map_cons, a_to_b_hd],
+      simp [multiset.cons_eq_cons, heq],
+    end,
+  end,
+  begin
+    simp,
+  end
+end

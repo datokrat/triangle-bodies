@@ -9,6 +9,15 @@ def convex_body (V : Type)
 
 variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
+lemma nonempty_of_convex_body {K : convex_body V} : K.val.nonempty :=
+K.property.2.2
+
+lemma bounded_of_convex_body {K : convex_body V} : metric.bounded K.val :=
+(metric.compact_iff_closed_bounded.mp K.property.2.1).2
+
+lemma closed_of_convex_body {K : convex_body V} : is_closed K.val :=
+(metric.compact_iff_closed_bounded.mp K.property.2.1).1
+
 def convex_body_subset (E : submodule ℝ V) (K : convex_body V) : Prop :=
 K.val ⊆ (E : set V)
 
@@ -67,11 +76,50 @@ noncomputable def span_of_convex_body
 (K : convex_body V) : submodule ℝ V :=
 vector_span ℝ K.val
 
-instance pmetric_convex_body : pseudo_metric_space (convex_body V) :=
-sorry
+noncomputable instance has_dist_convex_body : has_dist (convex_body V) :=
+{
+  dist := λ K L, metric.Hausdorff_dist K.val L.val,
+}
 
-instance metric_convex_body : metric_space (convex_body V) :=
-sorry
+lemma edist_body_ne_top {K L : convex_body V} :
+emetric.Hausdorff_edist K.val L.val ≠ ⊤ :=
+begin
+  apply metric.Hausdorff_edist_ne_top_of_nonempty_of_bounded,
+  any_goals {apply nonempty_of_convex_body},
+  any_goals {apply bounded_of_convex_body},
+end
+
+noncomputable instance pmetric_convex_body : pseudo_metric_space (convex_body V) :=
+{
+  to_has_dist := has_dist_convex_body,
+  dist_self := λ K, metric.Hausdorff_dist_self_zero,
+  dist_comm := λ K L, metric.Hausdorff_dist_comm,
+  dist_triangle := λ K L M, metric.Hausdorff_dist_triangle edist_body_ne_top,
+}
+
+noncomputable instance metric_convex_body : metric_space (convex_body V) :=
+{
+  to_pseudo_metric_space := pmetric_convex_body,
+  eq_of_dist_eq_zero :=
+  begin
+    intros K L hd,
+    apply subtype.coe_inj.mp,
+    rw [←subtype.val_eq_coe, ←subtype.val_eq_coe],
+    refine (emetric.Hausdorff_edist_zero_iff_eq_of_closed _ _).mp _,
+    any_goals {exact closed_of_convex_body},
+    replace hd := congr_arg ennreal.of_real hd,
+    simpa only [dist, metric.Hausdorff_dist, ennreal.of_real_zero, 
+      ennreal.of_real_to_real edist_body_ne_top] using hd,
+  end
+}
+
+lemma dist_body_eq_Hausdorff_edist
+(K L: convex_body V) :
+ennreal.of_real (dist K L) = emetric.Hausdorff_edist K.val L.val :=
+begin
+  simp only [dist, metric.Hausdorff_dist],
+  rw [ennreal.of_real_to_real edist_body_ne_top],
+end
 
 
 lemma compact_convex_body {K : set V} (Kcb : is_convex_body K) :

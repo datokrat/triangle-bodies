@@ -443,37 +443,6 @@ begin
   apply le_trans hSD hDC,
 end
 
-lemma multiset_exists_of_le_map {α β : Type} {f : α → β} {b : multiset β} {l : multiset α} :
-b ≤ multiset.map f l → ∃ as : multiset α, as ≤ l ∧ multiset.map f as = b :=
-begin
-  induction b,
-  begin
-    induction b generalizing l,
-    begin
-      simp,
-    end,
-    begin
-      intro h,
-      simp only [multiset.quot_mk_to_coe''] at *,
-      rw [←multiset.cons_coe] at *,
-      have := multiset.mem_of_le h (multiset.mem_cons_self b_hd b_tl),
-      simp only [multiset.mem_map] at this,
-      rcases this with ⟨a, ⟨a_mem_l, a_to_b_hd⟩⟩,
-      rcases (multiset.exists_cons_of_mem a_mem_l) with ⟨l_tl, rfl⟩,
-      simp only [multiset.map_cons, a_to_b_hd] at h,
-      have := multiset.erase_le_erase b_hd h,
-      simp only [multiset.erase_cons_head] at this,
-      rcases b_ih this with ⟨as_tl, ⟨hle, heq⟩⟩,
-      apply exists.intro (a ::ₘ as_tl),
-      simp only [multiset.cons_le_cons_iff, hle, multiset.map_cons, a_to_b_hd],
-      simp [multiset.cons_eq_cons, heq],
-    end,
-  end,
-  begin
-    simp,
-  end
-end
-
 def cart_prod {V W : Type} (A : set V) (B : set W) : set (V × W) :=
 { x : V × W | x.fst ∈ A ∧ x.snd ∈ B }
 

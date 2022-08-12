@@ -1,5 +1,6 @@
-import convex convex_body multiset brunn_minkowski microid
-  init.data.fin.ops
+import convex convex_body multiset brunn_minkowski microid set_pi
+  microid_ops
+  --init.data.fin.ops
 
 open_locale pointwise
 open_locale topological_space
@@ -64,532 +65,16 @@ def in_combinatorial_closure
 u ∈ msupport (bm.area (K ::ₘ Ps)) →
 u ∈ closure (⋃ L ∈ S, msupport (bm.area (L ::ₘ Ps)))
 
-def lfe --locally face equivalent
-(U : set (metric.sphere (0 : V) 1))
-(P Q : polytope V) :=
-∀ u : metric.sphere (0 : V) 1,
-u ∈ U → vector_span ℝ (normal_face P.val u) = vector_span ℝ (normal_face Q.val u)
 
-def chop_generator {k : ℕ} {c : ℕ}
-(φ : fin c.succ → fin k.succ)
-(G : microid_generator_space V k) :
-microid_generator_space V c :=
-begin
-  refine ⟨G.val ∘ φ, _⟩,
-  simp only [subtype.val_eq_coe, mem_ball_zero_iff],
-  admit,
-end
-
-lemma chop_def {k : ℕ} {c : ℕ}
-{φ : fin c.succ → fin k.succ} :
-(chop_generator φ : microid_generator_space V k → microid_generator_space V c)
-= (λ G, chop_generator φ G) := rfl
-
-noncomputable def diam_generator {k : ℕ}
-(G : microid_generator_space V k) : ℝ :=
-metric.diam (G.val '' set.univ)
-
-lemma generator_range_bounded {k : ℕ}
-(G : microid_generator_space V k) :
-metric.bounded (set.range G.val) :=
-begin
-  let C := finset.sup finset.univ (has_nnnorm.nnnorm ∘ G.val),
-  refine ⟨C + C, _⟩,
-  intros x hx y hy,
-  rcases set.mem_range.mp hx with ⟨x, rfl⟩,
-  rcases set.mem_range.mp hy with ⟨y, rfl⟩,
-  have nx : ∥ G.val x ∥₊ ≤ C := finset.le_sup (finset.mem_univ x),
-  have ny : ∥ G.val y ∥₊ ≤ C := finset.le_sup (finset.mem_univ y),
-  refine le_trans _ (add_le_add nx ny),
-  apply dist_le_norm_add_norm,
-end
-
-lemma h_diam_continuous {k : ℕ} {ε : ℝ}
-(x y : microid_generator_space V k) (h : dist x y < ε / 4) :
-diam_generator x < ε + diam_generator y :=
-begin
-  have hh : ε / 2 < ε := sorry,
-  have hδ' : 0 ≤ ε / 2 := sorry,
-  refine lt_of_le_of_lt _ (add_lt_add_right hh (diam_generator y)),
-  simp only [diam_generator],
-  apply metric.diam_le_of_forall_dist_le,
-  {
-    rw [←@add_zero ℝ _ 0],
-    exact add_le_add hδ' metric.diam_nonneg,
-  },
-  {
-    intros u hu v hv,
-    rcases (set.mem_image _ _ _).mp hu with ⟨pu, hpu, rfl⟩,
-    rcases (set.mem_image _ _ _).mp hv with ⟨pv, hpv, rfl⟩,
-    simp only [dist_eq_norm],
-    have : x.val pu - x.val pv = ((x.val-y.val) pu - (x.val-y.val) pv)
-      + (y.val pu - y.val pv),
-    {
-      simp only [pi.sub_apply],
-      abel,
-    },
-    rw [this],
-    refine le_trans (norm_add_le _ _) _,
-    refine add_le_add _ _,
-    {
-      refine le_trans (norm_sub_le _ _) _,
-      refine le_trans (add_le_add (norm_le_pi_norm _ _) (norm_le_pi_norm _ _)) _,
-      -- have : ∀ x : ℝ, x + x = 2 * x := sorry,
-      -- have two_gt: 2 > 0 := by positivity,
-      -- rw [this],
-      rw [←dist_eq_norm],
-      have := metric.mem_ball.mp h,
-      -- rw [dist_comm] at this,
-      change dist x y + dist x y ≤ ε / 2,
-      refine le_of_lt (lt_of_lt_of_le (add_lt_add this this) _),
-      admit,
-    },
-    {
-      rw[←dist_eq_norm],
-      refine metric.dist_le_diam_of_mem _ _ _,
-      {
-        simp only [set.image_univ],
-        apply generator_range_bounded,
-      },
-      all_goals {
-        refine (set.mem_image _ _ _).mp _,
-        simp only [set.image_univ, set.mem_range_self],
-      },
-    },
-  },
-end
-
-lemma diam_continuous (k : ℕ) :
-continuous (diam_generator : microid_generator_space V k → ℝ) :=
-begin
-  simp only [continuous_def],
-  simp only [metric.is_open_iff],
-  intros U hU x hxU,
-  replace hxU := set.mem_preimage.mp hxU,
-  rcases hU _ hxU with ⟨ε, hε, hx⟩,
-  let δ := ε / 2,
-  have hδ : δ > 0 := half_pos hε,
-  have hδ' : δ ≥ 0 := le_of_lt hδ,
-  let γ := ε / 4,
-  have hγ : γ > 0 := sorry,
-  have hγ' : γ ≥ 0 := le_of_lt hγ,
-  have hh : δ < ε := sorry,
-  refine ⟨γ, hγ, _⟩,
-  intros y hy,
-  simp only [set.mem_preimage],
-  apply hx,
-  simp only [metric.mem_ball, real.dist_eq],
-  refine abs_lt.mpr ⟨_, _⟩,
-  {
-    simp only [neg_lt_sub_iff_lt_add],
-    replace hy := metric.mem_ball.mp hy,
-    rw [dist_comm] at hy,
-    refine h_diam_continuous _ _ hy,
-  },
-  {
-    simp only [sub_lt_iff_lt_add],
-    replace hy := metric.mem_ball.mp hy,
-    refine h_diam_continuous _ _ hy,
-  },
-end
-
-lemma const_of_diam_zero {k : ℕ}
-{G : microid_generator_space V k}
-(h : diam_generator G = 0) (m n : fin k.succ) :
-G.val m = G.val n :=
-begin
-  simp only [diam_generator, subtype.val_eq_coe, set.image_univ] at h,
-  simp only [subtype.val_eq_coe],
-  apply dist_le_zero.mp,
-  {
-    rw [←h],
-    refine metric.dist_le_diam_of_mem _ _ _,
-    {apply generator_range_bounded},
-    {simp only [subtype.val_eq_coe, set.mem_range_self]},
-    {simp only [subtype.val_eq_coe, set.mem_range_self]},
-  },
-end
-
-noncomputable def norm_generator {k : ℕ}
-(G : microid_generator_space V k) : microid_generator_space V k :=
-begin
-  let f := G.val - function.const _ (G.val 0),
-  refine ⟨λ m, (1 / diam_generator G) • (G.val m - G.val 0) , _⟩,
-  simp only [set.image_univ, one_div, mem_closed_ball_zero_iff],
-  simp only [pi.norm_def, nnnorm_smul],
-  have : ∀ b : fin k.succ, ∥G.val b - G.val 0∥ ≤ diam_generator G,
-  {
-    intro b,
-    rw [←dist_eq_norm],
-    refine metric.dist_le_diam_of_mem _ _ _,
-    {rw [set.image_univ], apply generator_range_bounded},
-    all_goals {
-      rw [set.image_univ],
-      simp only [subtype.val_eq_coe, set.mem_range_self],
-    },
-  },
-  admit,
-end
-
-lemma norm_generator_positive_factor₁ {k : ℕ}
-(G : microid_generator_space V k) (h : diam_generator G = 0) :
-(norm_generator G).val = (1 : ℝ /- some painful seconds -/) • (G.val - function.const _ (G.val 0)) :=
-begin
-  funext,
-  simp only [norm_generator, one_div, pi.sub_apply,
-    function.const_apply, one_smul],
-  have : G.val m - G.val 0 = 0,
-  {
-    rw [const_of_diam_zero h _ 0],
-    simp only [sub_self],
-  },
-  simp only [this, smul_zero],
-end
-
-lemma norm_generator_positive_factor₂ {k : ℕ}
-(G : microid_generator_space V k) (h : diam_generator G ≠ 0) :
-(diam_generator G)⁻¹ > 0 ∧ (norm_generator G).val = (diam_generator G)⁻¹ • (G.val - function.const _ (G.val 0)) :=
-begin
-  replace h : diam_generator G > 0,
-  {
-    simp only [diam_generator] at h,
-    exact ne.lt_of_le' h metric.diam_nonneg,
-  },
-  refine ⟨_, _⟩,
-  {
-    exact inv_pos_of_pos h,
-  },
-  {
-    funext,
-    simp only [norm_generator, one_div, pi.smul_apply, pi.sub_apply],
-  },
-end
-
-lemma norm_generator_positive_factor {k : ℕ}
-(G : microid_generator_space V k) :
-∃ c : ℝ, c > 0 ∧ (norm_generator G).val = c • (G.val - function.const _ (G.val 0)) :=
-begin
-  by_cases h : diam_generator G = 0,
-  {
-    refine ⟨1, zero_lt_one, _⟩,
-    exact norm_generator_positive_factor₁ G h,
-  },
-  {
-    refine ⟨(diam_generator G)⁻¹, _⟩,
-    exact norm_generator_positive_factor₂ G h,
-  }
-end
-
-lemma dist_times_norm {k : ℕ}
-(G : microid_generator_space V k) :
-∃ v : V, G.val = (diam_generator G • (norm_generator G).val) + function.const _ v :=
-begin
-    simp only [norm_generator, one_div, set.image_univ],
-    simp only [pi.smul_def, smul_smul],
-    by_cases h : diam_generator G = 0,
-    {
-      rw [h],
-      simp only [inv_zero, mul_zero, zero_smul],
-      refine ⟨G.val 0, _⟩,
-      funext,
-      simp only [pi.add_apply, function.const_apply, zero_add],
-      refine const_of_diam_zero h _ _,
-    },
-    {
-      rw [mul_inv_cancel h],
-      simp only [one_smul],
-      refine ⟨G.val 0, _⟩,
-      funext,
-      simp only [pi.add_apply, sub_add_cancel],
-    },
-end
-
-noncomputable def prunenorm_generator {k : ℕ} {c : ℕ}
-(φ : fin c.succ → fin k.succ)
-(G : microid_generator_space V k) : microid_generator_space V c :=
-norm_generator (chop_generator φ G)
-
-lemma prunenorm_def {k : ℕ} {c : ℕ}
-(φ : fin c.succ → fin k.succ) :
-(prunenorm_generator φ : microid_generator_space V k → microid_generator_space V c) =
-norm_generator ∘ chop_generator φ := rfl
-
-lemma prunenorm_prunenorm {c₁ c₂ c₃: ℕ}
-(φ₁ : fin c₁.succ → fin c₂.succ) (φ₂ : fin c₂.succ → fin c₃.succ)
-(G : microid_generator_space V c₃) :
-prunenorm_generator φ₁ (prunenorm_generator φ₂ G) =
-prunenorm_generator (φ₂ ∘ φ₁) G :=
-sorry
-
-lemma diam_norm_generator_eq {k : ℕ}
-(G : microid_generator_space V k) :
-diam_generator G ≠ 0 → diam_generator (norm_generator G) = 1 :=
-begin
-  intro h,
-  rcases norm_generator_positive_factor₂ G h with ⟨hgt, heq⟩,
-end
-
-lemma set_image_smul' {α : Type} {t : set α} {a : ℝ} (f : α → V) :
-(a • f) '' t = a • (f '' t) :=
-begin
-  have : a • f = (λ x, a • x) ∘ f,
-  {
-    funext,
-    simp only [pi.smul_apply],
-  },
-  rw [this],
-  rw [set.image_comp _ f t],
-  ext, split,
-  all_goals {
-    intro hx,
-    rcases (set.mem_image _ _ _).mp hx with ⟨px, hpx, rfl⟩,
-    refine (set.mem_image _ _ _).mpr ⟨px, hpx, rfl⟩,
-  },
-end
-
-lemma polytope_of_norm_generator_smul {k : ℕ}
-(G : microid_generator_space V k) :
-∃ c : ℝ, c > 0 ∧
-(polytope_of_microid_generator (norm_generator G)).val =
-c • ((polytope_of_microid_generator G).val + {-(G.val 0)}) :=
-begin
-  rcases norm_generator_positive_factor G with ⟨c, hc₁, hc₂⟩,
-  refine ⟨c, hc₁, _⟩,
-  simp only [polytope_of_microid_generator, hc₂],
-  rw [←set.image_univ],
-  rw [set_image_smul', convex_hull_smul],
-  congr,
-  rw [←@convex_hull_singleton ℝ V _ _ _ (-(G.val 0))],
-  rw [←convex_hull_add],
-  congr,
-  ext, split,
-  {
-    intro hx,
-    rcases (set.mem_image _ _ _).mp hx with ⟨px, hpx, rfl⟩,
-    refine ⟨G.val px, -G.val 0, _, _, _⟩,
-    {
-      simp only [set.mem_range_self],
-    },
-    {
-      simp only [set.mem_singleton],
-    },
-    {
-      simp only [pi.sub_apply, function.const_apply],
-      abel,
-    },
-  },
-  {
-    rintro ⟨a, b, ha, hb, rfl⟩,
-    rcases (set.mem_range).mp ha with ⟨pa, hpa, rfl⟩,
-    refine (set.mem_image _ _ _).mpr ⟨pa, _, _⟩,
-    {
-      simp only [set.mem_univ],
-    },
-    {
-      simp only [set.eq_of_mem_singleton hb, pi.sub_apply,
-      function.const_apply],
-      abel,
-    },
-  },
-end
-
-lemma h_normal_face_homothety (A : set V) (u : V) (c : ℝ) (v : V)
-(h : c > 0) : normal_face (c • (A + {v})) u ⊆ c • (normal_face A u + {v}) :=
-begin
-  simp only [normal_face],
-  intro x,
-  {
-    intros hx,
-    replace hx := set.mem_set_of.mp hx,
-    rcases set.mem_smul_set.mp hx.1 with ⟨y, hy, rfl⟩,
-    refine set.mem_smul_set.mpr (set.smul_mem_smul_set _),
-    apply set.mem_set_of.mpr,
-    refine ⟨y - v, v, _, _⟩,
-    {
-      apply set.mem_set_of.mpr,
-      rcases hy with ⟨a, vv, ha, hvv, rfl⟩,
-      rcases set.eq_of_mem_singleton hvv,
-      split,
-      {
-        simp only [ha, add_sub_cancel],
-      },
-      {
-        intros y hy,
-        replace hx := hx.2,
-        have := hx (c • (y + v)) _,
-        {
-          simp only [inner_smul_left, inner_add_left,
-            is_R_or_C.conj_to_real, (smul_eq_mul ℝ).symm] at this,
-          replace := (smul_le_smul_iff_of_pos h).mp this,
-          simpa only [add_sub_cancel, add_le_add_iff_right] using this,
-        },
-        {
-          refine set.smul_mem_smul_set ⟨y, v, hy, _, rfl⟩,
-          exact set.mem_singleton _,
-        },
-      },
-    },
-    {
-      refine ⟨set.mem_singleton _, by simp only [sub_add_cancel]⟩,
-    },
-  },
-end
-
-lemma normal_face_homothety {A : set V} {u : V} {c : ℝ} (v : V)
-(h : c > 0) : normal_face (c • (A + {v})) u = c • (normal_face A u + {v}) :=
-begin
-  apply subset_antisymm,
-  {
-    apply h_normal_face_homothety A u c v h,
-  },
-  {
-    let B := c • (A + {v}),
-    refine (set.set_smul_subset_iff₀ (ne_of_gt h)).mpr _,
-    suffices hh : normal_face A u ⊆ c⁻¹ • (normal_face (c • (A + {v})) u + {-c • v}),
-    {
-      rintro x ⟨n, vv, hn, hvv, rfl⟩,
-      cases set.eq_of_mem_singleton hvv,
-      rcases set.mem_smul_set.mp (hh hn) with ⟨a, ha, rfl⟩,
-      refine set.mem_smul_set.mpr ⟨a - (-c) • v, _, _⟩,
-      {
-        rcases ha with ⟨b, d, hb, hd, rfl⟩,
-        cases set.eq_of_mem_singleton hd,
-        convert hb,
-        simp only [add_sub_cancel],
-      },
-      {
-        simp only [neg_smul, sub_neg_eq_add, smul_add, add_right_inj,
-          inv_smul_smul₀ (ne_of_gt h)],
-      },
-    },
-    convert h_normal_face_homothety B u c⁻¹ (-c • v) (inv_pos_of_pos h),
-    ext, split,
-    {
-      intro hx,
-      refine (set.mem_smul_set_iff_inv_smul_mem₀ (ne_of_gt (inv_pos_of_pos h)) _ _).mpr _,
-      simp only [B, inv_inv, set.add_singleton, neg_smul, set.image_add_right,
-        set.mem_preimage, neg_neg],
-      refine set.mem_smul_set.mpr _,
-      refine ⟨x + v, _, _⟩,
-      {
-        refine (set.mem_preimage).mpr _,
-        convert hx,
-        simp only [add_neg_cancel_right],
-      },
-      {
-        rw [smul_add],
-      },
-    },
-    {
-      intro hx,
-      rcases set.mem_smul_set.mp hx with ⟨y, ⟨b, w, hb, hw, rfl⟩, rfl⟩,
-      rcases set.eq_of_mem_singleton hw,
-      simp only [B] at hb,
-      rcases set.mem_smul_set.mp hb with ⟨d, ⟨e, q, he, hq, rfl⟩, rfl⟩,
-      rcases set.eq_of_mem_singleton hq,
-      simp only [neg_smul, sub_neg_eq_add, smul_add,
-        sub_neg_eq_add],
-      simp only [smul_neg, (smul_assoc _ _ _).symm,
-        (inv_mul_eq_one₀ (ne_of_gt h)).mpr rfl, smul_eq_mul, one_smul,
-        add_neg_cancel_right],
-      assumption,
-    },
-  },
-end
-
-lemma h_vector_span_homothety (A : set V) {c : ℝ} (v : V)
-(h : c > 0) :
-vector_span ℝ A ≥ vector_span ℝ (c • (A + {v})) :=
-begin
-  refine submodule.span_le.mpr _,
-  simp only [vector_span],
-  rintro x ⟨a₁, a₂, ha₁, ha₂, rfl⟩,
-  rcases set.mem_smul_set.mp ha₁ with ⟨d₁, ⟨e₁, v₁, he₁, hv₁, rfl⟩, rfl⟩,
-  rcases set.mem_smul_set.mp ha₂ with ⟨d₂, ⟨e₂, v₂, he₂, hv₂, rfl⟩, rfl⟩,
-  rcases set.eq_of_mem_singleton hv₁,
-  rcases set.eq_of_mem_singleton hv₂,
-  simp only [vsub_eq_sub],
-  rw [←smul_sub],
-  change c • (e₁ + v - (e₂ + v)) ∈ /- need change to remove ↑ here -/ (submodule.span ℝ (A -ᵥ A)),
-  refine submodule.smul_mem _ c _,
-  rw [add_sub_add_right_eq_sub],
-  apply submodule.subset_span,
-  refine ⟨e₁, e₂, he₁, he₂, rfl⟩,
-end
-
-lemma vector_span_homothety {A : set V} {c : ℝ} (v : V)
-(h : c > 0) :
-vector_span ℝ (c • (A + {v})) = vector_span ℝ A :=
-begin
-  apply le_antisymm,
-  {
-    exact h_vector_span_homothety A v h,
-  },
-  {
-    -- might become a separate lemma!
-    have : A = c⁻¹ • ((c • (A + {v})) + {-c • v}),
-    {
-      simp only [smul_add, neg_smul, set.smul_set_singleton, smul_neg],
-      simp only [inv_smul_smul₀ (ne_of_gt h)],
-      rw [add_assoc],
-      -- Worked with squeeze_simp, but doesn't work now: simp only [set.singleton_add_singleton, set.singleton_add_singleton, add_right_neg, set.add_singleton, add_zero, set.image_id', eq_self_iff_true],
-      simp only [set.singleton_add_singleton, add_right_neg, add_zero],
-      simp only [set.add_singleton, add_zero, set.image_id'],
-    },
-    convert h_vector_span_homothety (c • (A + {v})) (-c • v) (inv_pos_of_pos h),
-  },
-end
-
-lemma gen_lfe_norm {k : ℕ}
-(G : microid_generator_space V k) :
-lfe ⊤ (polytope_of_microid_generator G) (polytope_of_microid_generator (norm_generator G)) :=
-begin
-  unfold lfe,
-  rintro u -,
-  rcases polytope_of_norm_generator_smul G with ⟨c, hc₁, hc₂⟩,
-  simp only [hc₂],
-  rw [normal_face_homothety _ hc₁],
-  rw [vector_span_homothety _ hc₁],
-  apply_instance, -- why????
-end
-
-lemma lim_norm_gen {k : ℕ}
-{t : ℕ → microid_generator_space V k}
-{tl : microid_generator_space V k }
-(htt : filter.tendsto t filter.at_top (𝓝 tl))
-(hd : ∀ n : ℕ, diam_generator (t n) = 1) :
-diam_generator tl = 1 :=
-begin
-  simp only [diam_generator],
-  have tt₁ : filter.tendsto (λ n : ℕ, diam_generator (t n)) filter.at_top (𝓝 (diam_generator tl)),
-  {
-    convert (filter.tendsto.comp (continuous.continuous_at (diam_continuous k)) htt),
-  },
-  have tt₂ : filter.tendsto (λ n : ℕ, diam_generator (t n)) filter.at_top (𝓝 1),
-  {
-    simp only [hd],
-    exact tendsto_const_nhds,
-  },
-  exact tendsto_nhds_unique tt₁ tt₂,
-end
-
-lemma prunenorm_id_eq_norm {k : ℕ} :
-(prunenorm_generator id : microid_generator_space V k → microid_generator_space V k) =
-norm_generator :=
-begin
-  funext,
-  simp only [prunenorm_generator, chop_generator, subtype.val_eq_coe,
-  function.comp.right_id, subtype.coe_eta],
-end
 
 noncomputable def generator_face {k : ℕ}
 (G : microid_generator_space V k) (u : metric.sphere (0 : V) 1) : finset (fin k.succ) :=
 (finset.fin_range k.succ).filter (λ m, ∀ n : fin k.succ, ⟪G.val m, u⟫_ℝ ≥ ⟪G.val n, u⟫_ℝ)
 
 lemma diam_generator_nonneg {k : ℕ}
-(G : microid_generator_space V k) : diam_generator G ≥ 0 :=
+(G : unbounded_microid_generator V k) : diam_generator' G ≥ 0 :=
 begin
-  simp only [diam_generator],
+  simp only [diam_generator'],
   exact metric.diam_nonneg,
 end
 
@@ -643,9 +128,10 @@ generator_face (norm_generator G) u = generator_face G u :=
 begin
   ext,
   simp only [generator_face, norm_generator, one_div, ge_iff_le, finset.mem_filter, finset.mem_fin_range,
-    true_and],
-  simp only [smul_sub, inner_sub_left, sub_le_sub_iff_right],
-  by_cases hzero : diam_generator G = 0,
+    true_and, norm_generator', scale_translate_gen, scale_gen, translate_gen],
+  simp only [(sub_eq_add_neg _ _).symm, smul_sub,
+    inner_sub_left, sub_le_sub_iff_right],
+  by_cases hzero : diam_generator' G.val = 0,
   {
     simp only [hzero, inv_zero, zero_smul, le_refl, forall_const, true_iff],
     intro n,
@@ -656,7 +142,7 @@ begin
     intros h n,
     replace h := h n,
     simp only [inner_smul_left, is_R_or_C.conj_to_real] at h,
-    replace h := mul_le_mul_of_nonneg_left h (diam_generator_nonneg G),
+    replace h := mul_le_mul_of_nonneg_left h (diam_generator_nonneg G.val),
     rw [←mul_assoc] at h,
     rw [←mul_assoc] at h,
     simpa only [mul_inv_cancel hzero, one_mul] using h,
@@ -871,6 +357,20 @@ begin
   all_goals {assumption},
 end
 
+lemma diam_norm_zero_of_diam_zero {k : ℕ}
+{G : unbounded_microid_generator V k} (h : diam_generator' G = 0) :
+diam_generator' (norm_generator' G) = 0 :=
+begin
+  rw [norm_generator_factor G, diam_scale_translate],
+  {
+    rw [h, mul_zero],
+  },
+  {
+    rw [h, inv_zero],
+    exact le_refl 0,
+  },
+end
+
 lemma angle_norm {k : ℕ}
 {l m : fin k.succ} {u : metric.sphere (0 : V) 1} {t : ℕ → microid_generator_space V k}
 :
@@ -878,22 +378,28 @@ angle l m u ∘ (norm_generator ∘ t) = angle l m u ∘ t :=
 begin
   funext,
   simp only [angle, set.image_univ, one_div, function.comp_app],
-  rcases dist_times_norm (t x) with ⟨v, hv⟩,
+  rcases dist_times_norm (t x).val with ⟨v, hv⟩,
   rw [hv],
-  simp only [←smul_sub, subtype.val_eq_coe, pi.add_apply, pi.smul_apply,
-    add_sub_add_right_eq_sub],
+  simp only [translate_gen, scale_gen],
+  simp only [inner_sub_left, inner_add_left, add_sub_add_right_eq_sub],
+  simp only [inner_sub_left.symm],
+  rw [←smul_sub],
   simp only [inner_smul_left, norm_smul, is_R_or_C.conj_to_real,
     real.norm_eq_abs],
-  by_cases h : diam_generator (t x) = 0,
+  by_cases h : diam_generator' (t x).val = 0,
   {
     simp only [h, zero_mul, abs_zero, div_zero, div_eq_zero_iff, norm_eq_zero],
     apply or.inr,
     simp only [norm_generator, h, div_zero, zero_smul, subtype.coe_mk, sub_self],
+    have dnzero := diam_norm_zero_of_diam_zero h,
+    have := const_of_diam_zero dnzero,
+    rw [this m l, sub_self],
   },
   {
-    simp only [diam_generator] at h ⊢,
+    simp only [diam_generator'] at h ⊢,
     rw [abs_eq_self.mpr (metric.diam_nonneg)],
     rw [mul_div_mul_left _ _ h],
+    refl,
   }
 end
 
@@ -912,7 +418,9 @@ lemma angle_chop {k₁ k₂ : ℕ}
 angle (φ l) (φ m) u = angle l m u ∘ chop_generator φ :=
 begin
   funext,
-  simp only [angle, chop_generator, function.comp_app], -- Wow!
+  simp only [angle, chop_generator, chop_generator',
+    function.comp_app, subtype.val_eq_coe],
+  -- Wow!
 end
 
 lemma anglett_chop {k₁ k₂ : ℕ}

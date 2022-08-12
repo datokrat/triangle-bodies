@@ -1,5 +1,5 @@
 import algebra.group.defs group_theory.submonoid.basic
-  group_theory.submonoid.operations tactic matryoshka
+  group_theory.submonoid.operations tactic matryoshka microid_ops
 
 def p (V : Type) [add_monoid V] : Prop := sorry
 
@@ -59,8 +59,6 @@ begin
   subst h,
 end
 
-set_option pp.implicit true
-
 example {V : Type} {α β : Type}
   [add_monoid V]
   (A' : multiset α)
@@ -76,14 +74,17 @@ begin
   rw [h],
 end
 
-lemma blorb {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
-{k : ℕ} {u: metric.sphere (0 : V) 1}
-(A : multiset (microid_pair k u))
-(h : (λ x : microid_pair k u, pair_to_TS (reduce_pair x)) = pair_to_default_space) :
-(A.map (λ x, pair_to_TS (reduce_pair x))).sum = (A.map (λ x, pair_to_default_space x)).sum :=
+variables {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
+
+example {V : Type} {c₁ c₂ c₃ : ℕ}
+  [inner_product_space ℝ V]
+  [finite_dimensional ℝ V]
+  (φ₁ : fin c₁.succ → fin c₂.succ)
+  (φ₂ : fin c₂.succ → fin c₃.succ)
+  (G : ↥(microid_generator_space V c₃))
+  (h : 0 < metric.diam (set.range ((G.val ∘ φ₂) ∘ φ₁))) :
+  metric.diam (set.range (G.val ∘ φ₂)) > 0 :=
 begin
-  suffices h : (λ x : microid_pair k u, pair_to_TS (reduce_pair x)) = pair_to_default_space,
-  {
-    rw [h],
-  }
+  simp only [subtype.val_eq_coe, gt_iff_lt],
+  refine lt_of_lt_of_le _ _,
 end

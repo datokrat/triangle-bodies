@@ -27,6 +27,7 @@ def polytope :=
 def convex_body_of_polytope (P : polytope V) : convex_body V :=
 sorry
 
+abbreviation unbounded_microid_generator (k : ℕ) := fin k.succ → V
 abbreviation microid_generator_space (k : ℕ) := metric.closed_ball (0 : fin k.succ → V) 1
 
 noncomputable instance borel_measurable_space_microid_generator_space (k : ℕ) :=

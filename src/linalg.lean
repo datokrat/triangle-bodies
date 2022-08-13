@@ -1,5 +1,5 @@
 import multiset convex data.fintype.basic linear_algebra.dimension
-  measure_theory.measure.measure_space_def
+  set_pi measure_theory.measure.measure_space_def
   data.multiset
   linear_algebra.finite_dimensional
   analysis.inner_product_space.projection
@@ -17,6 +17,9 @@ variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
 noncomputable def vector_orth (u : V) : submodule ℝ V :=
 (submodule.span ℝ ({u} : set V))ᗮ
+
+lemma mem_vector_orth {u : V} {x : V} :
+x ∈ vector_orth u ↔ ⟪x, u⟫_ℝ = 0 := sorry
 
 noncomputable abbreviation dim := finite_dimensional.finrank ℝ
 abbreviation diff (A : set V) := A -ᵥ A
@@ -102,7 +105,7 @@ end
 
 lemma set_le_add_right (E F : set V) (h : (0: V) ∈ F) : E ⊆ E + F :=
 begin
-  conv {to_lhs, rw [←@set_add_zero V _ E]},
+  conv {to_lhs, rw [←@set_add_zero V _ _ E]},
   apply_rules [set_add_le_add_right, set.singleton_subset_iff.mpr h],
 end
 
@@ -127,7 +130,7 @@ begin
         intros H K,
         conv {
           to_lhs,
-          rw [←@set_add_zero V _ H],
+          rw [←@set_add_zero V _ _ H],
         },
         apply_rules [set_add_le_add_right, zero_subset_submodule],
       end,
@@ -204,12 +207,6 @@ begin
     intros h e he,
     exact h he,
   }
-end
-
-lemma set_vsub_eq_sub
-  {A B : set V} : A -ᵥ B = A - B :=
-begin
-  refl,
 end
 
 lemma set_ABAB_AABB
@@ -461,8 +458,6 @@ begin
   }
 end
 
-set_option trace.simp_lemmas true
-
 lemma set_sum_project_commute (A B : set V) (E : submodule ℝ V) :
 project_set E (A + B) = (project_set E A) + (project_set E B) :=
 begin
@@ -498,7 +493,7 @@ project_set E C.sum = (C.map (project_set E)).sum :=
 begin
   induction C using pauls_multiset_induction with C c ih,
   {
-    simp [project_set],
+    simp only [project_set, multiset.sum_zero, set.image_zero, map_zero, multiset.map_zero],
     trivial,
   },
   {
@@ -601,7 +596,7 @@ begin
       tauto,
     },
     {
-      simp,
+      simp only [set.mem_image, set_like.mem_coe, submodule.coe_eq_zero, exists_eq_right, submodule.zero_mem],
     },
     {
       rintro y z ⟨py, hyU, rfl⟩ ⟨pz, hzU, rfl⟩,
@@ -610,7 +605,7 @@ begin
       {
         apply submodule.add_mem _ hyU hzU,
       },
-      simp,
+      simp only [submodule.coe_add],
     },
     {
       rintro a y ⟨py, pyU, rfl⟩,
@@ -619,7 +614,7 @@ begin
       {
         apply submodule.smul_mem _ a pyU,
       },
-      simp,
+      simp only [submodule.coe_smul_of_tower],
     },
   },
   {
@@ -692,7 +687,7 @@ begin
   {
     rintro x ⟨hxf, hxW⟩,
     refine ⟨⟨x, hxW⟩, _⟩,
-    simp [hxf],
+    simp only [hxf, submodule.comap_coe, submodule.coe_subtype, set.mem_preimage, submodule.coe_mk, eq_self_iff_true, and_self],
   }
 end
 
@@ -718,8 +713,7 @@ begin
   let k := g ∘ₗ h,
   refine k.cod_restrict f.ker _,
   rintro ⟨c, hc⟩,
-  apply_fun linear_map.ker_le_ker_comp _ _ at hc,
-  simp,
+  exact hc,
 end
 
 def ker_dom_restrict_inclusion_injective
@@ -728,9 +722,15 @@ def ker_dom_restrict_inclusion_injective
   (f : V →ₗ[K] V₂) (W : submodule K V) :
 function.injective (ker_dom_restrict_inclusion f W) :=
 begin
+  have : function.injective (coe : f.ker → V) := subtype.coe_injective,
   rintro x y,
   unfold ker_dom_restrict_inclusion,
-  simp,
+  simp only, -- remove let
+  intro h,
+  replace h := congr_arg (coe : f.ker → V) h,
+  simp only [linear_map.cod_restrict_apply, linear_map.comp_apply] at h,
+  simp only [submodule.coe_subtype] at h,
+  exact subtype.coe_injective (subtype.coe_injective h),
 end
 
 lemma subspace_rank_nullity
@@ -779,32 +779,31 @@ lemma map_vector_span {R : Type} {M : Type} {M₂ : Type} [field R]
 : submodule.map f (vector_span R s) = vector_span R (f '' s) :=
 begin
   simp only [vector_span],
-  have : f '' s -ᵥ f '' s = f '' (s -ᵥ s) :=
-  begin
-    apply le_antisymm,
+  simp only [submodule.map_span],
+  congr,
+  apply le_antisymm,
+  {
+    rintro x ⟨d, ⟨a, b, ha, hb, rfl⟩, rfl⟩,
+    refine ⟨f a, f b, _⟩,
+    refine ⟨⟨a, ⟨ha, rfl⟩⟩, ⟨b, ⟨hb, rfl⟩⟩, _⟩,
+    simp [linear_map.map_sub],
+  },
+  {
+    rintro x ⟨fa, fb, ⟨a, ha, rfl⟩, ⟨b, hb, rfl⟩, rfl⟩,
+    refine ⟨a - b, _⟩,
+    split,
     {
-      rintro x ⟨fa, fb, ⟨a, ha, rfl⟩, ⟨b, hb, rfl⟩, rfl⟩,
-      refine ⟨a - b, _⟩,
-      split,
-      {
-        refine ⟨a, b, ha, hb, rfl⟩,
-      },
-      simp only [linear_map.map_sub],
-      refl,
+      refine ⟨a, b, ha, hb, rfl⟩,
     },
-    {
-      rintro x ⟨d, ⟨a, b, ha, hb, rfl⟩, rfl⟩,
-      refine ⟨f a, f b, _⟩,
-      refine ⟨⟨a, ⟨ha, rfl⟩⟩, ⟨b, ⟨hb, rfl⟩⟩, _⟩,
-      simp [linear_map.map_sub],
-    }
-  end
+    simp only [linear_map.map_sub],
+    refl,
+  },
 end
 
 lemma project_subspace_vector_span {A : set V} {E : submodule ℝ V} :
 project_subspace E (vector_span ℝ A) = vector_span ℝ (project_set E A) :=
 begin
-  simp [project_subspace, map_vector_span],
+  simp only [project_subspace, map_vector_span, continuous_linear_map.to_linear_map_eq_coe, continuous_linear_map.coe_coe],
   refl,
 end
 
@@ -815,7 +814,7 @@ begin
   rw [←multiset_sum_project_set_commute C Eᗮ],
   simp only [project_subspace, project_set],
   rw [map_vector_span (orthogonal_projection Eᗮ).to_linear_map],
-  simp,
+  simp only [continuous_linear_map.to_linear_map_eq_coe, continuous_linear_map.coe_coe],
 end
 
 lemma common_dimension_projection {C : multiset (set V)} {E : submodule ℝ V} :
@@ -829,20 +828,21 @@ end
 lemma kernel_eq (E : submodule ℝ V) :
 (orthogonal_projection E).ker = (orthogonal_projection E).to_linear_map.ker :=
 begin
-  dsimp,
-  norm_cast,
+  simp only [continuous_linear_map.ker],
+  refl,
 end
 
 lemma common_dimension_project_collection (C : multiset (set V)) (E : submodule ℝ V) :
 common_dimension (project_collection Eᗮ C) ≥ common_dimension C - finite_dimensional.finrank ℝ E :=
 begin
   simp only [common_dimension_projection],
-  dsimp [project_subspace, common_dimension, vector_span],
+  dsimp only [project_subspace, common_dimension, vector_span],
   have rn := dim_image_ge_dim_domain_sub_dim_ker (orthogonal_projection Eᗮ).to_linear_map (submodule.span ℝ (C.sum -ᵥ C.sum)),
   have : (orthogonal_projection Eᗮ).to_linear_map.ker = E :=
   begin
     rw [←kernel_eq Eᗮ],
-    simp [ker_of_orthogonal_projection Eᗮ, submodule.orthogonal_orthogonal E],
+    convert ker_of_orthogonal_projection Eᗮ,
+    simp only [submodule.orthogonal_orthogonal E],
   end,
   rw [this] at rn,
   assumption,
@@ -856,7 +856,7 @@ begin
   begin
     intro x,
     apply h,
-    simp,
+    simp only [submodule.coe_subtype, submodule.coe_mem],
   end,
   let f := E.subtype.cod_restrict F ok,
   have f_inj : function.injective f :=

@@ -281,6 +281,8 @@ begin
   exact set.singleton_subset_iff.mp this,
 end
 
+lemma convex_hull_subset_vector_space (A : set V) (E : submodule ℝ V) :
+A ⊆ E → convex_hull ℝ A ⊆ E := sorry
 
 
 /- theorem relint_aff_int (A : set V) : is_relopen (relint A) :=

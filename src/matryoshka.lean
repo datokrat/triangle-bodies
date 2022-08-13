@@ -178,7 +178,7 @@ lemma sum_multiset_le
 C.sum ≤ E :=
 begin
   induction C using multiset.induction,
-  {simp},
+  {simp only [multiset.sum_zero, submodule.zero_eq_bot, bot_le]},
   {
     simp only [multiset.sum_cons, submodule.add_eq_sup, sup_le_iff],
     split,
@@ -190,7 +190,7 @@ begin
       refine C_ᾰ _,
       intros W hW,
       refine h W _,
-      simp [hW],
+      simp only [hW, multiset.mem_cons, or_true],
     },
   },
 end

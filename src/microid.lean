@@ -101,6 +101,16 @@ begin
   },
 end
 
+lemma body_of_poly_of_gen_eq {k : ℕ}
+{G : microid_generator_space V k} :
+convex_body_of_polytope V (polytope_of_microid_generator G) =
+body_of_microid_generator G :=
+begin
+  simp only [convex_body_of_polytope, polytope_of_microid_generator,
+  body_of_microid_generator],
+  admit,
+end
+
 def microid_of_measure {k : ℕ} (μ : microid_measure V k) :
 convex_body V := sorry
 
@@ -123,8 +133,8 @@ def polytope_to_convex_body
 (P : polytope V) : convex_body V :=
 ⟨P.val, sorry⟩
 
-def is_default_polytope {k : ℕ} (μ : microid_measure V k.succ) (u : metric.sphere (0 : V) 1)
-(P : microid_generator_space V k.succ) :=
+def is_default_polytope {k : ℕ} (μ : microid_measure V k) (u : metric.sphere (0 : V) 1)
+(P : microid_generator_space V k) :=
 vector_span ℝ (polytope_of_microid_generator P).val ≤ vector_orth u.val ∧
 TS (polytope_of_microid_generator P).val u ≠ 0 ∧
 (∀ C : multiset (convex_body V),
@@ -247,8 +257,8 @@ begin
 end
 
 -- uses pruning lemma
-lemma exists_default_polytope_of_TS_nonzero {k : ℕ} {μ : microid_measure V k.succ}
+lemma exists_default_polytope_of_TS_nonzero {k : ℕ} {μ : microid_measure V k}
 (h : TS (microid_of_measure μ).val ≠ 0) (u : metric.sphere (0 : V) 1) :
-∃ P : microid_generator_space V k.succ, is_default_polytope μ u P := sorry
+∃ P : microid_generator_space V k, is_default_polytope μ u P := sorry
 
 end bla

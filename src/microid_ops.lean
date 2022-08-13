@@ -1,5 +1,5 @@
 import convex convex_body multiset brunn_minkowski microid set_pi
-  init.data.fin.ops
+  lfe init.data.fin.ops
 
 open_locale pointwise
 open_locale topological_space
@@ -22,12 +22,6 @@ unbounded_microid_generator V k :=
 noncomputable def scale_translate_gen {k : ℕ} (c : ℝ) (v : V) (G : unbounded_microid_generator V k) :
 unbounded_microid_generator V k :=
 scale_gen c (translate_gen v G)
-
-def lfe --locally face equivalent
-(U : set (metric.sphere (0 : V) 1))
-(P Q : polytope V) :=
-∀ u : metric.sphere (0 : V) 1,
-u ∈ U → vector_span ℝ (normal_face P.val u) = vector_span ℝ (normal_face Q.val u)
 
 def chop_generator' {k₁ k₂ : ℕ}
 (φ : fin k₁.succ → fin k₂.succ)

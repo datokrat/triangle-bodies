@@ -200,7 +200,12 @@ add_cancel_comm_monoid (convex_body V) :=
   end,
 }
 
-lemma coe_zero_body_eq : ((0 : convex_body V) : set V) = ({0} : set V) :=
+instance : has_lift_t (convex_body V) (set V) :=
+{
+  lift := (coe : { K // is_convex_body K } → set V)
+}
+
+lemma coe_zero_body_eq : (coe (0 : convex_body V) : set V) = ({0} : set V) :=
 rfl
 
 noncomputable def convex_body_to_positive_homogeneous : convex_body V →+ (V → ℝ) :=
@@ -211,7 +216,7 @@ noncomputable def convex_body_to_positive_homogeneous : convex_body V →+ (V �
     simp only [finite_support_function, support_function, coe_zero_body_eq, supr_unique, set.default_coe_singleton, inner_zero_left,
   ereal.coe_zero, ereal.to_real_zero],
   funext,
-  trivial,
+  simp only [pi.zero_apply],
   end,
   map_add' :=
   begin

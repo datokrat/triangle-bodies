@@ -55,3 +55,6 @@ begin
   ext,
   exact set.mem_sub,
 end
+
+lemma set_vsub_eq_sub {s t : set V} :
+s -ᵥ t = s - t := rfl

@@ -58,9 +58,17 @@ noncomputable def cuspiness {k : ℕ}
 
 
 
+noncomputable def generator_face' {k : ℕ}
+(G : unbounded_microid_generator V k) (u : metric.sphere (0 : V) 1) : finset (fin k.succ) :=
+(finset.fin_range k.succ).filter (λ m, ∀ n : fin k.succ, ⟪G m, u⟫_ℝ ≥ ⟪G n, u⟫_ℝ)
+
 noncomputable def generator_face {k : ℕ}
 (G : microid_generator_space V k) (u : metric.sphere (0 : V) 1) : finset (fin k.succ) :=
 (finset.fin_range k.succ).filter (λ m, ∀ n : fin k.succ, ⟪G.val m, u⟫_ℝ ≥ ⟪G.val n, u⟫_ℝ)
+
+lemma generator_face_generator_face' {k : ℕ}
+(G : microid_generator_space V k) (u : metric.sphere (0 : V) 1) :
+generator_face G u = generator_face' G.val u := rfl
 
 lemma diam_generator_nonneg {k : ℕ}
 (G : unbounded_microid_generator V k) : diam_generator' G ≥ 0 :=
@@ -82,13 +90,13 @@ begin
   exact ⟨a, ha, hp⟩,
 end
 
-lemma generator_face_nonempty {k : ℕ}
-(G : microid_generator_space V k) (u : metric.sphere (0 : V) 1) :
-(generator_face G u).nonempty :=
+lemma generator_face_nonempty' {k : ℕ}
+(G : unbounded_microid_generator V k) (u : metric.sphere (0 : V) 1) :
+(generator_face' G u).nonempty :=
 begin
-  rcases ex_finset_argmax (λ x : fin k.succ, ⟪G.val x, u⟫_ℝ) ⟨0, finset.mem_univ 0⟩ with ⟨m, -, hp⟩,
+  rcases ex_finset_argmax (λ x : fin k.succ, ⟪G x, u⟫_ℝ) ⟨0, finset.mem_univ 0⟩ with ⟨m, -, hp⟩,
   refine ⟨m, _⟩,
-  simp only [generator_face],
+  simp only [generator_face'],
   apply finset.mem_filter.mpr, split,
   {apply finset.mem_univ},
   {
@@ -96,6 +104,13 @@ begin
     simp only at hp,
     exact hp b (finset.mem_univ _),
   },
+end
+
+lemma generator_face_nonempty {k : ℕ}
+(G : microid_generator_space V k) (u : metric.sphere (0 : V) 1) :
+(generator_face G u).nonempty :=
+begin
+  exact generator_face_nonempty' G.val u,
 end
 
 lemma generator_face_equiv_fin {k : ℕ}
@@ -436,6 +451,354 @@ begin
   exact h,
 end
 
+lemma dist_inner_inner
+(v₁ v₂ w₁ w₂ : V) :
+⟪v₁, w₁⟫_ℝ ≤ ⟪v₂, w₂⟫_ℝ + (∥v₂ - v₁∥ * ∥w₁∥ + ∥v₂∥ * ∥w₂ - w₁∥) :=
+begin
+  conv {
+    to_lhs,
+    rw [←add_sub_cancel'_right v₂ v₁],
+    simp only [inner_add_left],
+  },
+  conv {
+    to_lhs,
+    congr,
+    {
+      rw [←add_sub_cancel'_right w₂ w₁],
+      simp only [inner_add_right],
+    },
+  },
+  simp only [add_assoc],
+  refine add_le_add_left _ _,
+  refine le_trans (add_le_add (real_inner_le_norm _ _) (real_inner_le_norm _ _)) _,
+  simp only [←dist_eq_norm],
+  rw [dist_comm v₁ v₂, dist_comm w₁ w₂, add_comm],
+end
+
+def is_facial_gap {k : ℕ}
+(G : unbounded_microid_generator V k)
+(u : metric.sphere (0 : V) 1)
+(ε : ℝ) :=
+ε > 0 ∧
+∀ l m : fin k.succ,
+l ∉ generator_face' G u →
+m ∈ generator_face' G u →
+⟪G m - G l, u⟫_ℝ > ε
+
+lemma exists_facial_gap {k : ℕ}
+(G : unbounded_microid_generator V k)
+(u : metric.sphere (0 : V) 1) :
+∃ ε : ℝ, is_facial_gap G u ε :=
+begin
+  by_cases h : (generator_face' G u)ᶜ = ∅,
+  {
+    refine ⟨1, zero_lt_one, _⟩,
+    intros l m hl,
+    rw [←finset.mem_compl, h] at hl,
+    cases hl,
+  },
+  {
+    replace h := finset.nonempty_of_ne_empty h,
+    have h' := generator_face_nonempty' G u,
+    let S := finset.product (generator_face' G u) (generator_face' G u)ᶜ,
+    have ne : S.nonempty := finset.nonempty_product.mpr ⟨h', h⟩,
+    let f : fin k.succ × fin k.succ → ℝ := λ p, ⟪G p.2 - G p.1, u⟫_ℝ,
+    rcases ex_finset_argmax f ne with ⟨p, hp, prop⟩,
+    simp only [finset.mem_product] at hp,
+    let δ := f p,
+    let ε := -(1/2) * δ,
+    have hδ : δ < 0,
+    {
+      simp only [δ, f],
+      rw [finset.mem_compl] at hp,
+      by_contra,
+      replace h := le_of_not_gt h,
+      simp only [inner_sub_left, sub_nonneg] at h,
+      rcases hp with ⟨hp₁, hp₂⟩,
+      have p2gen : p.2 ∈ generator_face' G u,
+      {
+        simp only [generator_face', finset.mem_filter] at hp₁ ⊢,
+        refine ⟨finset.mem_fin_range _, _⟩,
+        intro n,
+        exact le_trans (hp₁.2 n) h,
+      },
+      exact hp₂ p2gen,
+    },
+    refine ⟨ε, _, _⟩,
+    {
+      apply mul_pos_of_neg_of_neg,
+      {simp only [one_div, right.neg_neg_iff, inv_pos, zero_lt_bit0, zero_lt_one]},
+      {exact hδ},
+    },
+    {
+      intros l m hl hm,
+      simp only [ε],
+      rw [←neg_sub, inner_neg_left, neg_mul, gt_iff_lt, neg_lt_neg_iff],
+      have hle := prop ⟨m, l⟩ (finset.mem_product.mpr ⟨hm, finset.mem_compl.mpr hl⟩),
+      simp only [f, ge_iff_le] at hle,
+      refine lt_of_le_of_lt hle _,
+      change δ < 1 / 2 * δ,
+      rw [←neg_lt_neg_iff, ←mul_neg],
+      rw [←neg_neg δ] at hδ,
+      refine lt_of_le_of_lt (le_of_eq _) (half_lt_self (pos_of_neg_neg hδ)),
+      ring,
+    },
+  },
+end
+
+lemma facial_stability {k : ℕ}
+(G : unbounded_microid_generator V k)
+(u : metric.sphere (0 : V) 1) :
+∃ (U : set (unbounded_microid_generator V k))
+(W : set (metric.sphere (0 : V) 1)),
+U ∈ 𝓝 G ∧
+W ∈ 𝓝 u ∧
+∀ H v, H ∈ U → v ∈ W →
+generator_face' H v ⊆ generator_face' G u :=
+begin
+  rcases exists_facial_gap G u with ⟨ε, hε, gap⟩,
+
+  let f := λ x : ℝ, 2 * x + 2 * ∥G∥ * x,
+  have fcont : continuous f := by continuity,
+  have ftt : filter.tendsto f (𝓝 0) (𝓝 _) := fcont.continuous_at,
+  have f0 : f 0 = 0,
+  {
+    simp only [f],
+    ring,
+  },
+  simp only [filter.tendsto_def, f0] at ftt,
+  replace ftt := ftt _ (metric.ball_mem_nhds 0 hε),
+  simp only [metric.mem_nhds_iff, real.ball_eq_Ioo] at ftt,
+  rcases ftt with ⟨τ, hτ, balls⟩,
+  let ρ := τ / 2,
+  have hρ : ρ > 0 := by exact half_pos hτ,
+  have fρ : f ρ < ε,
+  {
+    simp only [zero_add] at balls,
+    refine (balls _).2,
+    split,
+    {
+      simp only [ρ],
+      apply sub_left_lt_of_lt_add,
+      positivity,
+    },
+    {
+      exact half_lt_self hτ,
+    },
+  },
+
+  let δ : ℝ := ρ,--min (ε / (8 * (∥G∥ + 1))) (real.sqrt ε) / 4,
+  have hδ : δ > 0 := hρ,
+  let γ : ℝ := ρ, --ε / 8,
+  have hγ : γ > 0 := hρ,
+  refine ⟨metric.ball G γ, metric.ball u δ,
+    metric.ball_mem_nhds G hγ, metric.ball_mem_nhds u hδ, _⟩,
+  intros H v hH hv,
+  intros x hx,
+  by_contra,
+  rcases generator_face_nonempty' G u with ⟨y, hy⟩,
+  have xygap := gap x y h hy,
+  rw [←neg_sub, inner_neg_left] at xygap,
+  rw [gt_iff_lt, lt_neg] at xygap,
+  have eq₁ : (↑v : V) = ↑u + (↑v - ↑u) := (add_sub_cancel'_right _ _).symm,
+  have eq₂ : H = G + (H - G) := (add_sub_cancel'_right _ _).symm,
+  simp only [generator_face', finset.mem_filter] at hx,
+  replace hx := hx.2 y,
+  simp only [ge_iff_le] at hx,
+  rw [←sub_nonneg, ←inner_sub_left] at hx,
+  have := le_trans hx (dist_inner_inner (H x - H y) (G x - G y) v u),
+  replace := lt_of_le_of_lt this (add_lt_add_right xygap _),
+  have i1 : ∥u.val - v.val∥ ≤ δ,
+  {
+    rw [←dist_eq_norm, dist_comm],
+    apply le_of_lt,
+    exact hv,
+  },
+  have i2 : ∥(G x - G y) - (H x - H y)∥ ≤ 2 * γ,
+  {
+    rw [sub_sub_sub_comm],
+    refine le_trans (norm_sub_le _ _) _,
+    change ∥(G - H) x∥ + ∥(G - H) y∥ ≤ 2 * γ,
+    refine le_trans (add_le_add (norm_le_pi_norm (G - H) _) (norm_le_pi_norm (G - H) _)) _,
+    rw [←dist_eq_norm, dist_comm],
+    apply le_of_lt,
+    refine lt_of_lt_of_le (add_lt_add hH hH) _,
+    ring_nf,
+  },
+  have i3 : ∥G x - G y∥ ≤ 2 * ∥G∥,
+  {
+    refine le_trans (norm_sub_le _ _) _,
+    refine le_trans (add_le_add (norm_le_pi_norm _ _) (norm_le_pi_norm _ _)) _,
+    ring_nf,
+  },
+  simp only [norm_eq_of_mem_sphere, mul_one, lt_neg_add_iff_add_lt,
+    add_zero] at this,
+  simp only [subtype.val_eq_coe.symm] at this,
+  replace := lt_of_lt_of_le this
+    (add_le_add i2 (mul_le_mul i3 i1 (norm_nonneg _) (by positivity))),
+
+  replace := lt_trans this fρ,
+  linarith,
+end
+
+def facial_chop_fn {k₁ k₂ : ℕ}
+{G : microid_generator_space V k₂}
+{u : metric.sphere (0 : V) 1}
+(gfin : generator_face G u ≃ fin k₁.succ) :
+fin k₁.succ → fin k₂.succ :=
+coe ∘ gfin.inv_fun
+
+lemma face_eq_hull_generator_face {k : ℕ}
+(G : microid_generator_space V k)
+(u : metric.sphere (0 : V) 1) :
+normal_face (polytope_of_microid_generator G).val u =
+convex_hull ℝ (G.val '' generator_face G u) :=
+begin
+  simp only [polytope_of_microid_generator],
+  simp only [normal_face_spanned_by_verts],
+  apply subset_antisymm,
+  {
+    apply convex_hull_mono,
+    intros x hx,
+    simp only [mem_normal_face] at hx,
+    rcases hx.1 with ⟨px, rfl⟩,
+    refine ⟨px, _, rfl⟩,
+    {
+      simp only [generator_face, finset.mem_coe, finset.mem_filter],
+      refine ⟨finset.mem_fin_range _, _⟩,
+      intro n,
+      exact hx.2 (G.val n) ⟨n, rfl⟩,
+    },
+  },
+  {
+    apply convex_hull_mono,
+    intros x hx,
+    simp only [mem_normal_face],
+    rcases hx with ⟨px, hpx, rfl⟩,
+    split,
+    {
+      exact ⟨px, rfl⟩,
+    },
+    {
+      intros y hy,
+      rcases hy with ⟨py, rfl⟩,
+      simp only [generator_face, finset.mem_coe, finset.mem_filter] at hpx,
+      exact hpx.2 py,
+    },
+  },
+end
+
+lemma face_chop_eq_of_generator_face {k₁ k₂ : ℕ}
+{G : microid_generator_space V k₂}
+{u : metric.sphere (0 : V) 1}
+(φ : fin k₁.succ → fin k₂.succ)
+(h : (generator_face G u : set (fin k₂.succ)) ⊆ set.range φ) :
+normal_face
+(polytope_of_microid_generator (chop_generator φ G)).val u =
+normal_face
+(polytope_of_microid_generator G).val u :=
+begin
+    simp only [face_eq_hull_generator_face],
+    refine congr_arg _ _,
+    have hge : (chop_generator φ G).val '' ↑(generator_face (chop_generator φ G) u) ≥ G.val '' ↑(generator_face G u),
+    {
+      rintro x ⟨px, hpx, rfl⟩,
+      rcases h hpx with ⟨ppx, hppx, rfl⟩,
+      refine ⟨ppx, _, rfl⟩,
+      {
+        rw [generator_face, finset.mem_coe, finset.mem_filter] at hpx ⊢,
+        refine ⟨finset.mem_fin_range _, _⟩,
+        intro n,
+        simp only [chop_generator, chop_generator', function.comp_app],
+        exact hpx.2 (φ n),
+      },
+    },
+    apply le_antisymm,
+    {
+      rintro x ⟨px, hpx, rfl⟩,
+      simp only [chop_generator, chop_generator'],
+      refine ⟨φ px, _, rfl⟩,
+      rw [generator_face, finset.mem_coe, finset.mem_filter] at hpx ⊢,
+      refine ⟨finset.mem_fin_range _, _⟩,
+      intro n,
+
+      rcases generator_face_nonempty G u with ⟨m, hm⟩,
+      rcases hge ⟨m, hm, rfl⟩ with ⟨pm, hpm, hpmeq⟩,
+      rw [generator_face, finset.mem_filter] at hm,
+      refine le_trans (hm.2 n) _,
+      rw [←hpmeq],
+      exact hpx.2 pm,
+    },
+    {
+      exact hge,
+    }
+end
+
+lemma facial_chopping_lemma {k₁ k₂ : ℕ}
+{G : microid_generator_space V k₂}
+{u : metric.sphere (0 : V) 1}
+(gfin : generator_face G u ≃ fin k₁.succ) :
+∃ (U : set (microid_generator_space V k₂))
+(W : set (metric.sphere (0 : V) 1)),
+U ∈ 𝓝 G ∧
+W ∈ 𝓝 u ∧
+∀ H, H ∈ U →
+lfe W
+(polytope_of_microid_generator H)
+(polytope_of_microid_generator
+(chop_generator (facial_chop_fn gfin) H)) :=
+begin
+  rcases facial_stability G.val u
+    with ⟨U', W, hU', hW, h⟩,
+  let U : set (microid_generator_space V k₂) := coe ⁻¹' U',
+  refine ⟨U, W, _, hW, _⟩,
+  {
+    simp only [U],
+    rw [preimage_coe_mem_nhds_subtype],
+    exact mem_nhds_within_of_mem_nhds hU',
+  },
+  {
+    intros H hH,
+    intros w hw,
+    refine congr_arg _ _,
+    symmetry,
+    refine face_chop_eq_of_generator_face _ _,
+    rintro l hl,
+    refine ⟨gfin ⟨l, _⟩, _⟩,
+    {exact (h H.val w hH hw) hl},
+    {
+      simp only [facial_chop_fn, equiv.inv_fun_as_coe,
+        function.comp_app, equiv.symm_apply_apply,
+        subtype.coe_mk],
+    },
+  },
+end
+
+lemma lfe_prunenorm {k₁ k₂ : ℕ}
+{t : ℕ → microid_generator_space V k₂}
+{tl : microid_generator_space V k₂}
+{u : metric.sphere (0 : V) 1}
+(gfin : generator_face tl u ≃ fin k₁.succ)
+(tt : filter.tendsto t filter.at_top (𝓝 tl)) :
+∃ U : set (metric.sphere (0 : V) 1),
+U ∈ 𝓝 u ∧
+∀ᶠ n in filter.at_top, lfe U
+(polytope_of_microid_generator (t n))
+(polytope_of_microid_generator
+  (prunenorm_generator (coe ∘ gfin.inv_fun) (t n))) :=
+begin
+  rcases facial_chopping_lemma gfin
+    with ⟨U, W, hU, hW, h⟩,
+  refine ⟨W, hW, _⟩,
+  rw [filter.tendsto_def] at tt,
+  refine filter.eventually.mono (tt U hU) _,
+  intros n hn,
+  simp only [prunenorm_generator],
+  rw [←set.inter_univ W],
+  refine lfe_trans _ (gen_lfe_norm _),
+  exact h _ hn,
+end
+
 lemma common_face_subset_face_lim {k : ℕ}
 {t : ℕ → microid_generator_space V k}
 {tl : microid_generator_space V k}
@@ -463,17 +826,53 @@ begin
   exact hf b n,
 end
 
+lemma prunenorm_norm {c₁ c₂: ℕ}
+(φ₁ : fin c₁.succ → fin c₂.succ)
+(G : microid_generator_space V c₂) :
+prunenorm_generator φ₁ (norm_generator G) =
+prunenorm_generator (φ₁) G :=
+begin
+  rw [←prunenorm_id_eq_norm, prunenorm_prunenorm, function.left_id],
+end
+
+def is_pre_pruning_seq {k₁ k₂ : ℕ} (u : metric.sphere (0 : V) 1)
+(t : ℕ → microid_generator_space V k₂)
+(tl : microid_generator_space V k₁)
+(φ : fin k₁.succ → fin k₂.succ)
+(m : fin k₂.succ)
+(ϕ : ℕ → ℕ) :=
+strict_mono ϕ ∧
+filter.tendsto (prunenorm_generator φ ∘ t ∘ ϕ) filter.at_top (𝓝 tl) ∧
+(∀ (l : fin k₁.succ), l ∈ generator_face tl u) ∧
+(∀ l : fin k₂.succ, anglett l m u t → l ∈ finset.image φ finset.univ)
+
+lemma subseq_is_pre_pruning_seq {k₁ k₂ : ℕ} {u : metric.sphere (0 : V) 1}
+{t : ℕ → microid_generator_space V k₂}
+{tl : microid_generator_space V k₁}
+{φ : fin k₁.succ → fin k₂.succ}
+{m : fin k₂.succ}
+{ϕ : ℕ → ℕ}
+{ns : ℕ → ℕ}
+(h : is_pre_pruning_seq u t tl φ m ϕ)
+(mon : strict_mono ns) : is_pre_pruning_seq u t tl φ m (ϕ ∘ ns) :=
+begin
+  rcases h with ⟨hϕ, h2, h3, h4⟩,
+  exact ⟨strict_mono.comp hϕ mon, tendsto_subseq_of_tendsto _ mon h2, h3, h4⟩,
+end
+
 lemma pre_pruning_lemma {k : ℕ} {u : metric.sphere (0 : V) 1}
 {t : ℕ → microid_generator_space V k}
 {m : fin k.succ}
 (hm : ∀ n : ℕ, m ∈ generator_face (t n) u) :
-∃ (c : ℕ) (φ : fin c.succ → fin k.succ) (ϕ : ℕ → ℕ) (tl : microid_generator_space V c),
-strict_mono ϕ ∧
-filter.tendsto (prunenorm_generator φ ∘ t ∘ ϕ) filter.at_top (𝓝 tl) ∧
-(∀ (l : fin c.succ),
-l ∈ generator_face tl u) ∧
-∀ l : fin k.succ, anglett l m u t →
-l ∈ finset.image φ finset.univ :=
+∃ (c : ℕ) (φ : fin c.succ → fin k.succ) (ϕ : ℕ → ℕ)
+(tl : microid_generator_space V c),
+is_pre_pruning_seq u t tl φ m ϕ ∧
+∃ U : set (metric.sphere (0 : V) 1), U ∈ 𝓝 u ∧
+∀ n : ℕ,
+lfe U
+(polytope_of_microid_generator (t (ϕ n)))
+(polytope_of_microid_generator ((prunenorm_generator φ ∘ t ∘ ϕ) n))
+:=
 begin
   let k₀ := k,
   have hk : k ≤ k₀ := le_refl k,
@@ -484,7 +883,7 @@ begin
     refine ⟨0, id, _⟩,
     let t₁ := norm_generator ∘ t,
     rcases exists_convergent_subseq t₁ with ⟨ϕ₂, mon1, ⟨tl₂, cv₂⟩⟩,
-    refine ⟨ϕ₂, tl₂, mon1, _, _, _⟩,
+    refine ⟨ϕ₂, tl₂, ⟨mon1, _, _, _⟩, _⟩,
     {
       rw [prunenorm_id_eq_norm],
       exact cv₂,
@@ -499,6 +898,12 @@ begin
       intros l tt,
       simp only [finset.image_id, finset.mem_univ],
     },
+    {
+      simp only [prunenorm_id_eq_norm, function.comp_app],
+      refine ⟨⊤, filter.univ_mem, _⟩,
+      intro n,
+      apply gen_lfe_norm,
+    },
   },
   {
     let t₁ := norm_generator ∘ t,
@@ -507,7 +912,7 @@ begin
     by_cases generator_face tl₂ u = finset.univ,
     {
       clear ih,
-      refine ⟨k, id, ϕ₂, tl₂, mon1, _, _, _⟩,
+      refine ⟨k, id, ϕ₂, tl₂, ⟨mon1, _, _, _⟩, _⟩,
       {
         rw [prunenorm_id_eq_norm],
         exact cv₂,
@@ -519,6 +924,12 @@ begin
       {
         intros l tt,
         simp only [finset.image_id, finset.mem_univ],
+      },
+      {
+        simp only [prunenorm_id_eq_norm, function.comp_app],
+        refine ⟨⊤, filter.univ_mem, _⟩,
+        intro n,
+        apply gen_lfe_norm,
       },
     },
     {
@@ -553,7 +964,7 @@ begin
           equiv.symm_apply_apply, subtype.coe_mk, norm_face_eq],
         apply hm,
       },
-      rcases @ih _ t' _ hm' Scard with ⟨c, φ, ϕ₃, tl₃, monih, h1, h2, h3⟩,
+      rcases @ih _ t' _ hm' Scard with ⟨c, φ, ϕ₃, tl₃, ⟨mon₃, h1, h2, h3⟩, h4⟩,
       clear ih,
       let t₃ := prunenorm_generator φ ∘ t' ∘ ϕ₃,
       have heq: prunenorm_generator (incl ∘ φ) ∘ t ∘ (ϕ₂ ∘ ϕ₃) = prunenorm_generator φ ∘ t' ∘ ϕ₃,
@@ -563,42 +974,67 @@ begin
         funext,
         simp only [function.comp_app, prunenorm_prunenorm, function.comp.left_id],
       },
-      refine ⟨c, incl ∘ φ, ϕ₂ ∘ ϕ₃, tl₃, _, _, h2, _⟩,
+      have : is_pre_pruning_seq u t tl₃ (incl ∘ φ) m (ϕ₂ ∘ ϕ₃),
       {
-        exact strict_mono.comp mon1 monih,
-      },
-      {
-        simpa only [heq] using h1,
-      },
-      {
-        intros l tt,
-        have at₂ : anglett l m u t₂,
+        refine ⟨_, _, h2, _⟩,
         {
-          simp only [t₂, t₁],
-          apply anglett_subsequence,
-          any_goals {apply anglett_norm_iff.mp},
-          all_goals {assumption},
+          exact strict_mono.comp mon1 mon₃,
         },
-        have lS : l ∈ S,
         {
-          simp only [S] at mS ⊢,
-          refine face_of_anglett cv₂ _ mS,
-          simpa only [t₂, t₁] using at₂,
+          simpa only [heq] using h1,
         },
-        let l' := Sfin ⟨l, lS⟩,
-        have at' : anglett l' m' u t',
         {
-          simp only [t'],
-          apply anglett_prunenorm,
-          simp only [incl, equiv.inv_fun_as_coe, function.comp_app,
+          intros l tt,
+          have at₂ : anglett l m u t₂,
+          {
+            simp only [t₂, t₁],
+            apply anglett_subsequence,
+            any_goals {apply anglett_norm_iff.mp},
+            all_goals {assumption},
+          },
+          have lS : l ∈ S,
+          {
+            simp only [S] at mS ⊢,
+            refine face_of_anglett cv₂ _ mS,
+            simpa only [t₂, t₁] using at₂,
+          },
+          let l' := Sfin ⟨l, lS⟩,
+          have at' : anglett l' m' u t',
+          {
+            simp only [t'],
+            apply anglett_prunenorm,
+            simp only [incl, equiv.inv_fun_as_coe, function.comp_app,
+              equiv.symm_apply_apply, subtype.coe_mk],
+            exact at₂,
+          },
+          simp only [m', t', t₂, t₁] at h3,
+          rcases finset.mem_image.mp (h3 l' at') with ⟨a, -, hal'⟩,
+          refine finset.mem_image.mpr ⟨a, finset.mem_univ a, _⟩,
+          simp only [hal', incl, equiv.inv_fun_as_coe, function.comp_app,
             equiv.symm_apply_apply, subtype.coe_mk],
-          exact at₂,
         },
-        simp only [m', t', t₂, t₁] at h3,
-        rcases finset.mem_image.mp (h3 l' at') with ⟨a, -, hal'⟩,
-        refine finset.mem_image.mpr ⟨a, finset.mem_univ a, _⟩,
-        simp only [hal', incl, equiv.inv_fun_as_coe, function.comp_app,
-          equiv.symm_apply_apply, subtype.coe_mk],
+      },
+      have cv₃ := tendsto_subseq_of_tendsto _ mon₃ cv₂,
+      rcases lfe_prunenorm Sfin cv₃ with
+        ⟨U₂, oU₂, lU₂⟩,
+      let p := λ n : ℕ, lfe U₂ (polytope_of_microid_generator ((t₁ ∘ ϕ₂) n)) (polytope_of_microid_generator (prunenorm_generator (coe ∘ Sfin.inv_fun) ((t₁ ∘ ϕ₂) n))),
+      rcases subseq_forall_of_frequently' p lU₂.frequently with
+        ⟨ϕ₄, mono₄, lU₂'⟩,
+      replace this := subseq_is_pre_pruning_seq this mono₄,
+      refine ⟨c, incl ∘ φ, (ϕ₂ ∘ ϕ₃) ∘ ϕ₄, tl₃, this, _⟩,
+      {
+        rcases h4 with ⟨U₁, oU₁, lU₁⟩,
+        simp only [function.comp_app],
+        simp only [t', t₂, t₁, function.comp_app] at lU₁,
+        simp only [p, t₁, function.comp_app] at lU₂',
+        simp only [prunenorm_norm] at lU₁ lU₂', -- rw not working
+        refine ⟨U₂ ∩ U₁, filter.inter_mem oU₂ oU₁, _⟩,
+        intro n,
+        rw [←prunenorm_prunenorm],
+        simp only [incl] at lU₁ ⊢,
+        refine lfe_trans _ (lU₁ (ϕ₄ n)),
+        rw [←set.univ_inter U₂],
+        exact lfe_trans (gen_lfe_norm _) (lU₂' n),
       },
     },
   },

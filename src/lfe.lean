@@ -19,6 +19,32 @@ def lfe --locally face equivalent
 ∀ u : metric.sphere (0 : V) 1,
 u ∈ U → vector_span ℝ (normal_face P.val u) = vector_span ℝ (normal_face Q.val u)
 
+lemma lfe_refl (P : polytope V) : lfe ⊤ P P :=
+begin
+  tauto,
+end
+
+lemma lfe_symm
+{U : set (metric.sphere (0 : V) 1)}
+{P Q : polytope V}
+(h : lfe U P Q) : lfe U Q P :=
+begin
+  intros v hv,
+  symmetry,
+  exact h v hv,
+end
+
+lemma lfe_trans
+{U₁ U₂ : set (metric.sphere (0 : V) 1)}
+{P Q R : polytope V}
+(h₁ : lfe U₁ P Q)
+(h₂ : lfe U₂ Q R) : lfe (U₁ ∩ U₂) P R :=
+begin
+  intros v hv,
+  simp only [set.mem_inter_eq] at hv,
+  simp only [h₁ v hv.1, h₂ v hv.2],
+end
+
 def in_combinatorial_closure
 (u : metric.sphere (0 : V) 1)
 (S : set (convex_body V))

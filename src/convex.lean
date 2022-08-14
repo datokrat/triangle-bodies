@@ -128,6 +128,9 @@ begin
   }
 end
 
+lemma normal_face_spanned_by_verts {S : set V} (u : V) :
+normal_face (convex_hull ℝ S) u = convex_hull ℝ (normal_face S u) := sorry
+
 --lemma face_body {A : set V} (u : V) (h : is_convex_body A) : is_convex_body (face A u) := sorry
 lemma face_polytope {A F : set V} (h : is_polytope A) (hf : is_face A F) : is_polytope F := sorry
 

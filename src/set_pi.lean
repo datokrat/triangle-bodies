@@ -1,4 +1,5 @@
 import data.set.basic analysis.inner_product_space.basic
+  multiset
 
 open_locale pointwise
 

@@ -1,5 +1,5 @@
 import algebra.group.defs group_theory.submonoid.basic
-  group_theory.submonoid.operations tactic matryoshka microid_ops
+  group_theory.submonoid.operations tactic matryoshka microid_ops pre_pruning
 
 def p (V : Type) [add_monoid V] : Prop := sorry
 
@@ -23,6 +23,7 @@ example {V : Type}
 begin
   simp only [nat.sub_self] at h,
   simp at h,
+  admit,
 end
 
 theorem one_a (n : ℕ) : (n^2 + (n+1)^2 = (n+2)^2 → n = 3) :=
@@ -49,42 +50,17 @@ begin
   simp only [proj_microid_of_measure E], -- rw does not work
 end
 
-#check @eq.rec
-
-def q (V : Type) [add_monoid V] : ℕ := sorry
-
-@[congr]
-lemma congr_q {V V' : Type} [add_monoid V] (h : V = V') : q V = @q V' (by { subst h, apply_instance }) :=
-begin
-  subst h,
-end
-
-example {V : Type} {α β : Type}
-  [add_monoid V]
-  (A' : multiset α)
-  (f : α → β)
-  (g : α → β)
-  (k : multiset β → add_submonoid V)
-  (h : f = g) :
-  let E : add_submonoid V := k (multiset.map f A')
-  in q ↥E = q (k (A'.map g)) :=
-begin
-  intros E,
-  simp only [E, function.comp_app],
-  rw [h],
-end
 
 variables {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
-example {V : Type} {c₁ c₂ c₃ : ℕ}
-  [inner_product_space ℝ V]
-  [finite_dimensional ℝ V]
-  (φ₁ : fin c₁.succ → fin c₂.succ)
-  (φ₂ : fin c₂.succ → fin c₃.succ)
-  (G : ↥(microid_generator_space V c₃))
-  (h : 0 < metric.diam (set.range ((G.val ∘ φ₂) ∘ φ₁))) :
-  metric.diam (set.range (G.val ∘ φ₂)) > 0 :=
+example {k : ℕ} (v : V) :
+false :=
 begin
-  simp only [subtype.val_eq_coe, gt_iff_lt],
-  refine lt_of_lt_of_le _ _,
+  let x : fin k.succ := sorry,
+  let y : fin k.succ := sorry,
+  replace J : unbounded_microid_generator V k := sorry,
+  replace hx : ⟪(J x), v⟫_ℝ ≥ ⟪(J y), v⟫_ℝ := sorry,
+  have : ∀ a b : ℝ, a ≥ b ↔ a - b ≤ 0 := sorry,
+  rw [this ⟪(J x), v⟫_ℝ ⟪(J y), v⟫_ℝ] at hx, -- !??
 end
+

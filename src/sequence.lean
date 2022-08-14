@@ -50,3 +50,19 @@ begin
   rw [←heq n],
   exact hs' (φ n),
 end
+
+-- perhaps compare subseq_forall_of_frequently
+lemma subseq_forall_of_frequently'
+{α : Type}
+{s : ℕ → α}
+(p : α → Prop)
+(h : ∃ᶠ n in filter.at_top, p (s n)) :
+∃ φ : ℕ → ℕ,
+strict_mono φ ∧
+∀ n : ℕ, p ((s ∘ φ) n) := sorry
+
+/- lemma frequently_subseq
+{α : Type}
+{s : ℕ → α}
+(p : α → Prop)
+(h : ∀ᶠ n in filter.at_top, p (s n)) : -/

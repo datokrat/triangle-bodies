@@ -866,6 +866,7 @@ lemma pre_pruning_lemma {k : ℕ} {u : metric.sphere (0 : V) 1}
 (hm : ∀ n : ℕ, m ∈ generator_face (t n) u) :
 ∃ (c : ℕ) (φ : fin c.succ → fin k.succ) (ϕ : ℕ → ℕ)
 (tl : microid_generator_space V c),
+c ≤ k ∧
 is_pre_pruning_seq u t tl φ m ϕ ∧
 ∃ U : set (metric.sphere (0 : V) 1), U ∈ 𝓝 u ∧
 ∀ n : ℕ,
@@ -883,7 +884,7 @@ begin
     refine ⟨0, id, _⟩,
     let t₁ := norm_generator ∘ t,
     rcases exists_convergent_subseq t₁ with ⟨ϕ₂, mon1, ⟨tl₂, cv₂⟩⟩,
-    refine ⟨ϕ₂, tl₂, ⟨mon1, _, _, _⟩, _⟩,
+    refine ⟨ϕ₂, tl₂, le_refl 0, ⟨mon1, _, _, _⟩, _⟩,
     {
       rw [prunenorm_id_eq_norm],
       exact cv₂,
@@ -912,7 +913,7 @@ begin
     by_cases generator_face tl₂ u = finset.univ,
     {
       clear ih,
-      refine ⟨k, id, ϕ₂, tl₂, ⟨mon1, _, _, _⟩, _⟩,
+      refine ⟨k, id, ϕ₂, tl₂, le_refl k, ⟨mon1, _, _, _⟩, _⟩,
       {
         rw [prunenorm_id_eq_norm],
         exact cv₂,
@@ -938,13 +939,17 @@ begin
       let S := generator_face tl₂ u,
       rcases generator_face_equiv_fin tl₂ u with ⟨c, hc, ⟨Sfin⟩⟩,
       let incl : fin c.succ → fin k.succ := coe ∘ Sfin.inv_fun,
+      have cltk : c < k,
+      {
+        apply nat.lt_of_succ_lt_succ,
+        rw [←hc],
+        simpa only [fintype.card_fin] using (finset.card_lt_iff_ne_univ _).mpr h,
+      },
       have Scard : c ≤ k₀,
       {
         apply nat.le_of_lt_succ,
         refine nat.lt_of_lt_of_le _ hk,
-        apply nat.lt_of_succ_lt_succ,
-        rw [←hc],
-        simpa only [fintype.card_fin] using (finset.card_lt_iff_ne_univ _).mpr h,
+        exact cltk,
       },
       let t' := prunenorm_generator incl ∘ t₂,
       have mS : m ∈ S,
@@ -964,7 +969,7 @@ begin
           equiv.symm_apply_apply, subtype.coe_mk, norm_face_eq],
         apply hm,
       },
-      rcases @ih _ t' _ hm' Scard with ⟨c, φ, ϕ₃, tl₃, ⟨mon₃, h1, h2, h3⟩, h4⟩,
+      rcases @ih _ t' _ hm' Scard with ⟨c', φ, ϕ₃, tl₃, c'lec, ⟨mon₃, h1, h2, h3⟩, h4⟩,
       clear ih,
       let t₃ := prunenorm_generator φ ∘ t' ∘ ϕ₃,
       have heq: prunenorm_generator (incl ∘ φ) ∘ t ∘ (ϕ₂ ∘ ϕ₃) = prunenorm_generator φ ∘ t' ∘ ϕ₃,
@@ -1021,7 +1026,10 @@ begin
       rcases subseq_forall_of_frequently' p lU₂.frequently with
         ⟨ϕ₄, mono₄, lU₂'⟩,
       replace this := subseq_is_pre_pruning_seq this mono₄,
-      refine ⟨c, incl ∘ φ, (ϕ₂ ∘ ϕ₃) ∘ ϕ₄, tl₃, this, _⟩,
+      refine ⟨c', incl ∘ φ, (ϕ₂ ∘ ϕ₃) ∘ ϕ₄, tl₃, _, this, _⟩,
+      {
+        exact le_trans c'lec (le_of_lt cltk),
+      },
       {
         rcases h4 with ⟨U₁, oU₁, lU₁⟩,
         simp only [function.comp_app],

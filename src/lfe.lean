@@ -59,8 +59,7 @@ lemma comb_cl_of_lfe
 {t : ℕ → polytope V}
 {S : set (polytope V)}
 {tl : convex_body V}
-(hU : is_open U)
-(uU : u ∈ U)
+(hU : U ∈ nhds u)
 (tt : filter.tendsto (λ n, convex_body_of_polytope V (t n))
   filter.at_top (𝓝 tl))
 (hl : ∀ n : ℕ, ∃ P ∈ S, lfe U (t n) P) :

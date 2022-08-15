@@ -49,7 +49,7 @@ def in_combinatorial_closure
 (u : metric.sphere (0 : V) 1)
 (S : set (convex_body V))
 (K : convex_body V) :=
-∀ Ps : multiset (convex_body V), dim V = Ps.card + 1 →
+∀ Ps : multiset (convex_body V), dim V = Ps.card + 2 →
 u ∈ msupport (bm.area (K ::ₘ Ps)) →
 u ∈ closure (⋃ L ∈ S, msupport (bm.area (L ::ₘ Ps)))
 
@@ -60,8 +60,8 @@ lemma comb_cl_of_lfe
 {S : set (polytope V)}
 {tl : convex_body V}
 (hU : U ∈ nhds u)
-(tt : filter.tendsto (λ n, convex_body_of_polytope V (t n))
+(tt : filter.tendsto (λ n, convex_body_of_polytope (t n))
   filter.at_top (𝓝 tl))
 (hl : ∀ n : ℕ, ∃ P ∈ S, lfe U (t n) P) :
-in_combinatorial_closure u (convex_body_of_polytope V '' S)
+in_combinatorial_closure u (convex_body_of_polytope '' S)
 tl := sorry

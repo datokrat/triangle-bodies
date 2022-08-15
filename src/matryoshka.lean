@@ -1,5 +1,5 @@
 import convex convex_body linalg measure touching_cone brunn_minkowski
-  microid criticality
+  microid criticality pruning
   analysis.convex.basic
   data.multiset.basic
   measure_theory.measure.measure_space
@@ -38,23 +38,36 @@ section preparation_lemmas
 
 variables {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
-def map_generator {k : ℕ} (G : microid_generator_space V k)
-(E : submodule ℝ V) : microid_generator_space E k := sorry
+noncomputable def project_generator {k : ℕ} (E : submodule ℝ V)
+(G : microid_generator_space V k) :
+microid_generator_space E k :=
+begin
+  refine ⟨(proj E) ∘ G.val, _⟩,
+  simp only [subtype.val_eq_coe, mem_closed_ball_zero_iff],
+  simp only [pi_norm_le_iff zero_le_one, function.comp_app],
+  intro l,
+  simp only [proj],
+  simp only [continuous_linear_map.to_linear_map_eq_coe,
+    continuous_linear_map.coe_coe, submodule.coe_norm],
+  refine le_trans (continuous_linear_map.le_op_norm (orthogonal_projection E) _) _,
+  refine le_trans (mul_le_mul (orthogonal_projection_norm_le E) (norm_le_pi_norm _ _) (norm_nonneg _) zero_le_one) _,
+  simpa only [one_mul, mem_closed_ball_iff_norm, sub_zero] using G.property,
+end
 
-def project_microid_measure {k : ℕ} (E : submodule ℝ V) (μ : microid_measure V k) :
-microid_measure E k := sorry
-
-lemma microid_orthogonal_projection {k : ℕ} {E : submodule ℝ V} {u : V}
-(μ : microid_measure V k) (uE : u ∈ E) :
-project_set E (microid_of_measure μ).val = (microid_of_measure
-(project_microid_measure E μ)).val := sorry
+noncomputable def project_microid_measure {k : ℕ} (E : submodule ℝ V) (μ : microid_measure V k) :
+microid_measure E k := finite_measure_map (project_generator E) μ
 
 noncomputable def TS_microid_measure {k : ℕ} (u : metric.sphere (0 : V) 1) (μ : microid_measure V k) :
 submodule ℝ V :=
 TS (microid_of_measure μ).val u.val
 
-def dirac_microid_measure {k : ℕ}
-(P : microid_generator_space V k) : microid_measure V k := sorry
+noncomputable def dirac_microid_measure {k : ℕ}
+(P : microid_generator_space V k) : microid_measure V k :=
+⟨measure_theory.measure.dirac P, sorry⟩ -- trivial
+
+lemma microid_of_dirac_eq {k : ℕ}
+(P : microid_generator_space V k) :
+microid_of_measure (dirac_microid_measure P) = body_of_microid_generator P := sorry
 
 end preparation_lemmas
 
@@ -71,7 +84,7 @@ def microid_pair (k : ℕ)
 def pair_to_default_body {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : convex_body V :=
-polytope_to_convex_body (polytope_of_microid_generator pair.2.1)
+convex_body_of_polytope (polytope_of_microid_generator pair.2.1)
 
 def pair_to_measure {k : ℕ}
 {u : metric.sphere (0 : V) 1}
@@ -82,7 +95,7 @@ def pair_to_microid {k : ℕ}
 microid_pair k u → convex_body V :=
 microid_of_measure ∘ pair_to_measure
 
-def pair_to_default_measure {k : ℕ}
+noncomputable def pair_to_default_measure {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : microid_measure V k :=
 dirac_microid_measure pair.2.1
@@ -90,7 +103,7 @@ dirac_microid_measure pair.2.1
 noncomputable def pair_to_TS {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : submodule ℝ V :=
-TS (microid_of_measure (pair_to_measure pair)).val u
+TS (pair_to_microid pair).val u
 
 lemma proj_microid_of_measure {k : ℕ}
 (E : submodule ℝ V)
@@ -98,42 +111,115 @@ lemma proj_microid_of_measure {k : ℕ}
 proj_body E (microid_of_measure μ) = microid_of_measure (project_microid_measure E μ) :=
 sorry
 
-def reduce_pair {k : ℕ}
+noncomputable def reduce_pair {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : microid_pair k u :=
-⟨pair_to_default_measure pair, ⟨pair.2.1, sorry⟩⟩
-
-lemma reduced_microid_subset_TS {k : ℕ}
-{u : metric.sphere (0 : V) 1}
-(pair : microid_pair k u) :
-(pair_to_microid (reduce_pair pair)).val ⊆ pair_to_TS (reduce_pair pair) := sorry
+begin
+  refine ⟨pair_to_default_measure pair, pair.2.1, _⟩,
+  rcases pair.2.2 with ⟨h1, h2, h3⟩,
+  refine ⟨h1, h2, _⟩,
+  {
+    simp only [pair_to_default_measure, microid_of_dirac_eq],
+    tauto,
+  },
+end
 
 lemma reduced_microid_eq_default_body {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) :
-(pair_to_microid (reduce_pair pair)) = pair_to_default_body pair := sorry
+(pair_to_microid (reduce_pair pair)) = pair_to_default_body pair :=
+begin
+  simp only [pair_to_microid, pair_to_TS, pair_to_measure, reduce_pair,
+  pair_to_default_measure, microid_of_dirac_eq, pair_to_default_body,
+  body_of_poly_of_gen_eq,
+  function.comp_app, function.comp_app],
+end
 
 lemma span_reduced_microid_eq_TS {k : ℕ}
 {u : metric.sphere (0 : V) 1} :
 span_of_convex_body ∘ pair_to_microid ∘ (reduce_pair : microid_pair k u → microid_pair k u) =
-pair_to_TS ∘ (reduce_pair : microid_pair k u → microid_pair k u) := sorry
+pair_to_TS ∘ (reduce_pair : microid_pair k u → microid_pair k u) :=
+begin
+  funext,
+  simp only [function.comp_app],
+  simp only [reduced_microid_eq_default_body, pair_to_default_body, pair_to_TS],
+  simp only [convex_body_of_polytope, polytope_of_microid_generator],
+  admit,
+end
+
+lemma nface_eq_self_of_vspan_mem_uperp {A : set V} {u : V}
+(h : vector_span ℝ A ≤ vector_orth u) : normal_face A u = A :=
+begin
+  apply subset_antisymm,
+  {
+    apply normal_face_subset,
+  },
+  {
+    intros a ha,
+    simp only [mem_normal_face],
+    refine ⟨ha, _⟩,
+    intros b hb,
+    have hab : a - b ∈ vector_orth u,
+    {
+      apply h,
+      apply submodule.subset_span,
+      exact ⟨a, b, ha, hb, rfl⟩,
+    },
+    simp only [vector_orth] at hab,
+    replace hab := inner_left_of_mem_orthogonal_singleton _ hab,
+    apply le_of_eq,
+    symmetry,
+    simpa only [inner_sub_left, sub_eq_zero] using hab,
+  },
+end
+
+lemma reduced_microid_subset_TS {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) :
+(pair_to_microid (reduce_pair pair)).val ⊆ pair_to_TS (reduce_pair pair) :=
+begin
+  simp only [reduced_microid_eq_default_body, pair_to_default_body, pair_to_TS],
+  simp only [convex_body_of_polytope],
+  have is_poly := (polytope_of_microid_generator pair.2.1).property,
+  -- simp only [polytope_of_microid_generator] at is_poly,
+  rw [TS_poly_eq_vspan_face is_poly],
+  rcases pair.2.2 with ⟨h1, h2, h3⟩,
+  rw [←subtype.val_eq_coe, nface_eq_self_of_vspan_mem_uperp h1],
+  -- apply submodule.subset_span, PROBLEM: doesn't have to be subset?
+  -- Solutions: either have default polytopes contain zero or
+  -- replace convex_body_subset by a vector_span criterion in bm
+  -- also, do span_reduced... first
+  admit,
+end
 
 noncomputable def pair_to_default_space {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : submodule ℝ V :=
 TS (pair_to_default_body pair).val u.val
 
-lemma default_space_eq_TS_of_reduced {k : ℕ}
-{u : metric.sphere (0 : V) 1}
-(pair : microid_pair k u) :
-pair_to_default_space (reduce_pair pair) = pair_to_TS (reduce_pair pair) :=
-sorry
-
 lemma TS_reduce_eq_default_space {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) :
 pair_to_TS (reduce_pair pair) = pair_to_default_space pair :=
-sorry
+begin
+  simp only [pair_to_TS, pair_to_default_space, reduced_microid_eq_default_body],
+  refl,
+end
+
+lemma reduced_default_body_eq {k : ℕ}{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) :
+pair_to_default_body (reduce_pair pair) = pair_to_default_body pair :=
+begin
+  simp only [pair_to_default_body, reduce_pair],
+end
+
+lemma default_space_eq_TS_of_reduced {k : ℕ}
+{u : metric.sphere (0 : V) 1}
+(pair : microid_pair k u) :
+pair_to_default_space (reduce_pair pair) = pair_to_TS (reduce_pair pair) :=
+begin
+  simp only [pair_to_default_space, TS_reduce_eq_default_space, reduced_default_body_eq],
+end
 
 noncomputable def pair_to_space_pair {k : ℕ}
 {u : metric.sphere (0 : V) 1}
@@ -143,28 +229,158 @@ noncomputable def pair_to_space_pair {k : ℕ}
 lemma pair_to_space_pair_def {k : ℕ}
 {u : metric.sphere (0 : V) 1} :
 @pair_to_space_pair V _ _ k u = λ pair, ⟨pair_to_TS pair, pair_to_default_space pair⟩ :=
-sorry
+rfl
 
 noncomputable def paircol_span {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (D : multiset (microid_pair k u)) : submodule ℝ V :=
 (D.map pair_to_default_space).sum
 
+lemma exists_prune_triple_seq {k : ℕ}
+{μ : microid_measure V k}
+{u : metric.sphere (0 : V) 1}
+(h : TS_microid_measure u μ ≠ 0) :
+∃ t : ℕ → prune_triple V k,
+(∀ n : ℕ, valid_prune_triple (t n) u) ∧
+(∀ n : ℕ, prune_triple_generator (t n) ∈ msupport μ) ∧
+filter.tendsto ((cuspiness u) ∘ t) filter.at_top (𝓝 (0 : ℝ)) :=
+begin
+  admit,
+end
+
+#exit
+
+lemma exists_pair {k : ℕ}
+{μ : microid_measure V k}
+{u : metric.sphere (0 : V) 1}
+(h : TS_microid_measure u μ ≠ 0) :
+∃ p : microid_pair k u,
+pair_to_measure p = μ :=
+begin
+  rcases exists_prune_triple_seq h with ⟨t, valid, genμ, tt⟩,
+  rcases pruning_lemma valid tt with ⟨G, hnz, hup, hcl⟩,
+  refine ⟨⟨μ, G, _⟩, _⟩,
+  {
+    refine ⟨hup, _, _⟩,
+    {
+      rw [TS_poly_eq_vspan_face (polytope_of_microid_generator G).property u],
+      rw [←subtype.val_eq_coe, nface_eq_self_of_vspan_mem_uperp hup],
+      exact hnz,
+    },
+    {
+      simp only [in_combinatorial_closure] at hcl,
+      intros C hC hsupp,
+      rw [body_of_poly_of_gen_eq] at hsupp,
+      have := hcl C hC hsupp,
+      rw [msupport_microid_eq_closure μ hC],
+      refine set.mem_of_subset_of_mem _ this,
+      apply closure_mono,
+      intros v hv,
+      simp only [set.mem_Union] at hv ⊢,
+      rcases hv with ⟨K, ⟨nK, -, rfl⟩, vsupp⟩,
+      refine ⟨prune_triple_generator (t nK), genμ nK, _⟩,
+      simp only [function.comp_app] at vsupp,
+      exact vsupp,
+    },
+  },
+  {
+    simp only [pair_to_measure],
+  },
+end
+
+lemma nonzero_of_mem_of_semicritical
+{Es : multiset (submodule ℝ V)}
+(h : semicritical_spaces Es) :
+∀ E : submodule ℝ V, E ∈ Es → E ≠ ⊥ :=
+begin
+  intros E hE,
+  let S : multiset (submodule ℝ V) := {E},
+  suffices hd : dim S.sum ≥ S.card,
+  {
+    by_contra,
+    simp only [h, S] at hd,
+    rw [multiset.sum_singleton E, multiset.card_singleton] at hd,
+    rw [h] at hd,
+    change finite_dimensional.finrank ℝ (⊥ : submodule ℝ V) ≥ 1 at hd,
+    simp only [finrank_bot, gt_iff_lt, not_lt_zero'] at hd,
+    linarith,
+  },
+  refine h S _,
+  simp only [S, multiset.singleton_le],
+  exact hE,
+end
+
 lemma exists_pair_multiset {k : ℕ}
 (μs : multiset (microid_measure V k))
 (u : metric.sphere (0 : V) 1)
 (hTS : semicritical_spaces (μs.map (TS_microid_measure u))) :
 ∃ C : multiset (microid_pair k u),
-C.map pair_to_measure = μs := sorry
+C.map pair_to_measure = μs :=
+begin
+  induction μs using pauls_multiset_induction,
+  {
+    refine ⟨0, _⟩,
+    simp only [multiset.map_zero],
+  },
+  {
+    have hTS': semicritical_spaces (μs_C'.map (TS_microid_measure u)),
+    {
+      simp only [multiset.map_cons] at hTS,
+      refine semicritical_of_le (multiset.le_cons_self _ _) hTS,
+    },
+    rcases μs_ᾰ hTS' with ⟨C', hC'⟩,
+    have μs_a_nonzero : TS_microid_measure u μs_a ≠ ⊥,
+    {
+      refine nonzero_of_mem_of_semicritical hTS _ _,
+      simp only [multiset.map_cons],
+      exact multiset.mem_cons_self _ _,
+    },
+    rcases exists_pair μs_a_nonzero with ⟨E, hE⟩,
+    refine ⟨E ::ₘ C', _⟩,
+    simp only [hC', hE, multiset.map_cons],
+  },
+end
 
 theorem matryoshka_reduction {k : ℕ}
 {u : metric.sphere (0 : V) 1}
-{D F : multiset (microid_pair k u)}
-(hdim : dim V = F.card + 1) :
-u ∈ msupport (bm.area ((D.map pair_to_default_body) + (F - D).map pair_to_microid)) →
-u ∈ msupport (bm.area (F.map pair_to_microid))
+{D C : multiset (microid_pair k u)}
+(hdim : dim V = (D + C).card + 1) :
+u ∈ msupport (bm.area ((D.map pair_to_default_body) + C.map pair_to_microid)) →
+u ∈ msupport (bm.area ((D + C).map pair_to_microid))
 :=
-sorry
+begin
+  revert C,
+  induction D using pauls_multiset_induction,
+  {
+    intros C hdim hu,
+    simpa only [multiset.map_zero, zero_add] using hu,
+  },
+  {
+    intros C hdim hu,
+    let C' := (reduce_pair D_a) ::ₘ C,
+    have hdim' : dim V = (D_C' + C').card + 1,
+    {
+      simp only [C', multiset.card_add, multiset.card_cons] at hdim ⊢,
+      rw [hdim],
+      ring,
+    },
+    have goal' := D_ᾰ hdim',
+    simp only [multiset.map_add, multiset.map_cons] at goal',
+    rw [multiset.add_cons, ←multiset.cons_add] at goal',
+    rw [reduced_microid_eq_default_body] at goal',
+    simp only [multiset.map_add, multiset.map_cons] at hu,
+    replace hu := goal' hu,
+    clear D_ᾰ goal',
+    simp only [multiset.cons_add, multiset.map_cons],
+    rw [multiset.add_cons, ←multiset.map_add] at hu,
+    have defp := D_a.2.2,
+    refine defp.2.2 _ _ hu,
+    simp only [multiset.card_map, multiset.card_add],
+    simp only [multiset.card_add, multiset.card_cons] at hdim,
+    rw [hdim],
+    ring,
+  },
+end
 
 end default_reduction
 
@@ -264,6 +480,8 @@ lemma coe_uncoe_sph {E : submodule ℝ V}
 (uE : u.val ∈ E) :
 coe_sph E (uncoe_sph E u uE) = u := sorry
 
+#exit
+
 --set_option pp.implicit true
 theorem matryoshka_principle {k : ℕ}
 (n₀ : ℕ)
@@ -340,7 +558,7 @@ begin
           intros x xD,
           rcases multiset.mem_map.mp xD with ⟨c, ⟨cC, rfl⟩⟩,
           simp only [pair_to_space_pair, pair_to_default_space,
-            pair_to_default_body, polytope_to_convex_body],
+            pair_to_default_body, convex_body_of_polytope],
           have is_default_poly := c.snd.2,
           exact is_default_poly.2.1,
         },
@@ -630,8 +848,10 @@ begin
         symmetry,
         simpa only [multiset.card_map, hdim2, add_left_inj] using hdim3,
       },
+      rcases multiset.le_iff_exists_add.mp hB'C with ⟨D, rfl⟩,
+      rw [add_tsub_cancel_left] at finp',
       have := matryoshka_reduction this finp',
       simpa only [multiset.map_map, pair_to_microid] using this,
-    }
-  }
+    },
+  },
 end

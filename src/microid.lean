@@ -24,9 +24,6 @@ variables (V : Type)
 def polytope :=
 { P : set V // is_polytope P }
 
-def convex_body_of_polytope (P : polytope V) : convex_body V :=
-sorry
-
 abbreviation unbounded_microid_generator (k : ℕ) := fin k.succ → V
 abbreviation microid_generator_space (k : ℕ) := metric.closed_ball (0 : fin k.succ → V) 1
 
@@ -60,6 +57,9 @@ end types
 section bla
 
 variables {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
+
+def convex_body_of_polytope (P : polytope V) : convex_body V :=
+⟨P.val, sorry⟩
 
 lemma finite_generator_range {k : ℕ} (G : microid_generator_space V k) :
 (set.range G.val).finite :=
@@ -103,7 +103,7 @@ end
 
 lemma body_of_poly_of_gen_eq {k : ℕ}
 {G : microid_generator_space V k} :
-convex_body_of_polytope V (polytope_of_microid_generator G) =
+convex_body_of_polytope (polytope_of_microid_generator G) =
 body_of_microid_generator G :=
 begin
   simp only [convex_body_of_polytope, polytope_of_microid_generator,
@@ -114,6 +114,12 @@ end
 def microid_of_measure {k : ℕ} (μ : microid_measure V k) :
 convex_body V := sorry
 
+lemma msupport_microid_eq_closure {k : ℕ}
+(μ : microid_measure V k)
+{C : multiset (convex_body V)}
+(hC : dim V = C.card + 2) :
+msupport (bm.area (microid_of_measure μ ::ₘ C)) =
+closure (⋃ L ∈ msupport μ, msupport (bm.area (body_of_microid_generator L ::ₘ C))) := sorry
 
 -- only used for c > 0
 def cuspy_cone (x : V) (u : V) (c : ℝ) :=
@@ -129,17 +135,13 @@ lemma cuspy_generators_of_cuspy {k : ℕ} {μ : microid_measure V k.succ} {u : V
 (h : is_cuspy (microid_of_measure μ).val u c) :
 ∀ G ∈ msupport μ, is_cuspy (polytope_of_microid_generator G).val u c := sorry
 
-def polytope_to_convex_body
-(P : polytope V) : convex_body V :=
-⟨P.val, sorry⟩
-
 def is_default_polytope {k : ℕ} (μ : microid_measure V k) (u : metric.sphere (0 : V) 1)
 (P : microid_generator_space V k) :=
 vector_span ℝ (polytope_of_microid_generator P).val ≤ vector_orth u.val ∧
 TS (polytope_of_microid_generator P).val u ≠ 0 ∧
 (∀ C : multiset (convex_body V),
-C.card = dim V - 2 →
-u ∈ msupport (bm.area ((polytope_to_convex_body (polytope_of_microid_generator P)) ::ₘ C)) →
+dim V = C.card + 2 →
+u ∈ msupport (bm.area ((convex_body_of_polytope (polytope_of_microid_generator P)) ::ₘ C)) →
 u ∈ msupport (bm.area (microid_of_measure μ ::ₘ C)))
 
 /- lemma finset_sum_pi_eq {α β: Type} {s : finset α}

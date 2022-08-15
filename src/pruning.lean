@@ -15,32 +15,144 @@ lemma tendsto_polytope_of_tendsto_generator {k : ℕ}
 {t : ℕ → microid_generator_space V k}
 {tl : microid_generator_space V k}
 (tt : filter.tendsto t filter.at_top (𝓝 tl)) :
-filter.tendsto (λ n, convex_body_of_polytope V (polytope_of_microid_generator (t n))) filter.at_top
-  (𝓝 (convex_body_of_polytope V (polytope_of_microid_generator tl))) :=
+filter.tendsto (λ n, convex_body_of_polytope (polytope_of_microid_generator (t n))) filter.at_top
+  (𝓝 (convex_body_of_polytope (polytope_of_microid_generator tl))) :=
 begin
   simp only [body_of_poly_of_gen_eq],
   exact filter.tendsto.comp (body_of_gen_continuous_at tl) tt,
 end
 
+lemma angle_self_zero {k : ℕ} (m : fin k.succ) (u : metric.sphere (0 : V) 1) :
+angle m m u = (λ G : microid_generator_space V k, 0) :=
+begin
+  funext,
+  simp only [angle, sub_self, norm_zero, div_zero],
+end
+
+lemma cuspiness_eq_angle {k : ℕ}
+(u : metric.sphere (0 : V) 1) (t : prune_triple V k) :
+cuspiness u t = angle (prune_secondary_index t) (prune_cusp_index t) u (prune_triple_generator t) :=
+begin
+  simp only [cuspiness, angle, prune_direction, prune_cusp,
+  prune_secondary, prune_gen_fn, prune_triple_generator],
+end
+
+lemma fun_eq_lambda {α β : Type} (f : α → β) :
+f = (λ a, f a) := rfl
+
+lemma diam_norm_eq_one {k : ℕ}
+{G : unbounded_microid_generator V k} (h : diam_generator' G > 0) :
+diam_generator' (norm_generator' G) = 1 :=
+begin
+  cases diam_norm_generator G,
+  {assumption},
+  {linarith},
+end
+
 lemma pruning_lemma' {k : ℕ} {u : metric.sphere (0 : V) 1}
 {t : ℕ → prune_triple V k}
 (valid : ∀ n : ℕ, valid_prune_triple (t n) u)
+-- (is_cusp : ∀ n : ℕ, prune_cusp_index (t n) ∈ generator_face (prune_triple_generator (t n)) u)
 (tt : filter.tendsto ((cuspiness u) ∘ t) filter.at_top (𝓝 (0 : ℝ))) :
 ∃ (c : ℕ) (G : microid_generator_space V c),
 c ≤ k ∧
+vector_span ℝ (polytope_of_microid_generator G).val ≠ ⊥ ∧
 vector_span ℝ (polytope_of_microid_generator G).val ≤ vector_orth u.val ∧
 in_combinatorial_closure u
 ((body_of_microid_generator ∘ prune_triple_generator ∘ t) '' set.univ)
 (body_of_microid_generator G) :=
 begin
-  let s : ℕ → finset (fin k.succ) := λ n, generator_face (prune_triple_generator (t n)) u,
-  have hs : ∀ n, (s n).nonempty := λ n, generator_face_nonempty (prune_triple_generator (t n)) u,
-  rcases ex_const_mem_subseq_of_setvalued_seq hs with ⟨b, ϕ, hmon, hb⟩,
-  change ∀ (n : ℕ), b ∈ (s ∘ ϕ) n at hb,
-  rcases pre_pruning_lemma hb
+  have is_cusp : ∀ n : ℕ, prune_cusp_index (t n) ∈ generator_face (prune_triple_generator (t n)) u,
+  {
+    intro n,
+    simp only [generator_face, finset.mem_coe, finset.mem_filter],
+    refine ⟨finset.mem_fin_range _, (valid n).1⟩,
+  },
+  let s :=
+  λ n : ℕ, (prune_cusp_index (t n), prune_secondary_index (t n)),
+  -- have hs : ∀ n, (s n).nonempty := λ n, generator_face_nonempty (prune_triple_generator (t n)) u,
+  -- rcases ex_const_mem_subseq_of_setvalued_seq hs with ⟨b, ϕ, hmon, hb⟩,
+  rcases ex_const_subseq_of_finite_range
+    (λ n : ℕ, (prune_cusp_index (t n), prune_secondary_index (t n)))
+      with ⟨⟨m, l⟩, ϕ, mon, index_const⟩,
+  simp only [prod.mk.inj_iff] at index_const,
+  replace index_const := and.intro (λ n, (index_const n).1.symm) (λ n, (index_const n).2.symm),
+  have hm : ∀ n : ℕ, m ∈ generator_face (prune_triple_generator ((t ∘ ϕ) n)) u,
+  {
+    intro n,
+    rw [index_const.1],
+    apply is_cusp,
+  },
+  -- change ∀ (n : ℕ), b ∈ (s ∘ ϕ) n at hb,
+  rcases pre_pruning_lemma hm
     with ⟨c, φ, ϕ₂, tl, clek, ⟨hmon, htt, hg, ha⟩, exU⟩,
-  refine ⟨c, tl, clek, _⟩,
-  split,
+  refine ⟨c, tl, clek, _, _, _⟩,
+  {
+    suffices h : diam_generator' tl.val = 1,
+    {
+      intro vsz,
+      have nz : set.subsingleton (set.range tl.val),
+      {
+        intros x hx y hy,
+        simp only [polytope_of_microid_generator] at vsz,
+        replace hx := subset_convex_hull ℝ _ hx,
+        replace hy := subset_convex_hull ℝ _ hy,
+        have := vsub_mem_vector_span ℝ hx hy,
+        rw [vsz] at this,
+        replace this := (submodule.mem_bot ℝ).mp this,
+        exact eq_of_sub_eq_zero this,
+      },
+      have := metric.diam_subsingleton nz,
+      simp only [diam_generator', set.image_univ] at h,
+      linarith,
+    },
+    let t' := λ n : ℕ, (prunenorm_generator φ (prune_triple_generator (t (ϕ (ϕ₂ n))))).val,
+    suffices h₂ : ∀ n : ℕ,
+    diam_generator' (t' n) = 1,
+    {
+      have htt' : filter.tendsto t' filter.at_top (𝓝 tl.val),
+      {
+        exact filter.tendsto.comp continuous_subtype_val.continuous_at htt,
+      },
+      refine lim_norm_gen htt' h₂,
+    },
+    have mφ : m ∈ finset.image φ finset.univ,
+    {
+      refine ha m _,
+      simp only [anglett, angle_self_zero],
+      convert tendsto_const_nhds,
+      tauto,
+    },
+    have lφ : l ∈ finset.image φ finset.univ,
+    {
+      refine ha l _,
+      replace tt := tendsto_subseq_of_tendsto _ mon tt,
+      rw [fun_eq_lambda ((cuspiness u ∘ t) ∘ ϕ)] at tt,
+      simp only [function.comp_app, cuspiness_eq_angle] at tt,
+      simp only [anglett],
+      convert tt,
+      funext n,
+      simp only [function.comp_app],
+      rw [index_const.1 n, index_const.2 n],
+    },
+    rcases finset.mem_image.mp mφ with ⟨pm, -, rfl⟩,
+    rcases finset.mem_image.mp lφ with ⟨pl, -, rfl⟩,
+    intro n,
+    simp only [t', prunenorm_generator],
+    refine diam_norm_eq_one _,
+    simp only [diam_generator', chop_generator, chop_generator'],
+    have hd : dist ((prune_triple_generator (t (ϕ (ϕ₂ n)))).val (φ pm))
+                   ((prune_triple_generator (t (ϕ (ϕ₂ n)))).val (φ pl)) > 0,
+    {
+      rw [gt_iff_lt, dist_pos],
+      rw [index_const.1 (ϕ₂ n), index_const.2 (ϕ₂ n)],
+      simp only [valid_prune_triple] at valid,
+      exact (valid _).2,
+    },
+    refine lt_of_lt_of_le hd _,
+    simp only [set.image_univ],
+    exact metric.dist_le_diam_of_mem (pi_range_bounded _) ⟨pm, rfl⟩ ⟨pl, rfl⟩,
+  },
   {
     simp only [vector_span, polytope_of_microid_generator],
     simp only [set_vsub_eq_sub],
@@ -64,7 +176,7 @@ begin
     rw [set.image_comp],
     rcases exU with ⟨U, hU, hlfe⟩,
     let S := polytope_of_microid_generator '' (prune_triple_generator ∘ t '' set.univ),
-    have : in_combinatorial_closure u (convex_body_of_polytope V '' S) _,
+    have : in_combinatorial_closure u (convex_body_of_polytope '' S) _,
     {
       refine comb_cl_of_lfe hU polytt _,
       simp only [S],
@@ -148,6 +260,7 @@ lemma pruning_lemma {k : ℕ} {u : metric.sphere (0 : V) 1}
 (valid : ∀ n : ℕ, valid_prune_triple (t n) u)
 (tt : filter.tendsto ((cuspiness u) ∘ t) filter.at_top (𝓝 (0 : ℝ))) :
 ∃ (G : microid_generator_space V k),
+vector_span ℝ (polytope_of_microid_generator G).val ≠ ⊥ ∧
 vector_span ℝ (polytope_of_microid_generator G).val ≤ vector_orth u.val ∧
 in_combinatorial_closure u
 ((body_of_microid_generator ∘ prune_triple_generator ∘ t) '' set.univ)
@@ -157,6 +270,6 @@ begin
     ⟨c, G', hle, hG'⟩,
   let G := convert_generator hle G',
   refine ⟨convert_generator hle G', _⟩,
-  rw [polytope_convert_eq hle, body_convert_eq hle],
+  simp only [polytope_convert_eq hle, body_convert_eq hle],
   exact hG',
 end

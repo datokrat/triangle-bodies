@@ -264,3 +264,6 @@ lemma TS_orthogonal_projection {E : submodule ℝ V}
 
 lemma TS_le_uperp (A : set V) (u : V) :
 TS A u ≤ vector_orth u := sorry
+
+lemma TS_poly_eq_vspan_face {P : set V} (hP : is_polytope P) (u : V) :
+TS P u = vector_span ℝ (normal_face P u) := sorry

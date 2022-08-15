@@ -45,7 +45,7 @@ prune_gen_fn t (prune_secondary_index t)
 
 def valid_prune_triple {k : ℕ}
 (t : prune_triple V k) (u : metric.sphere (0 : V) 1) : Prop :=
-∀ i : fin k, ⟪prune_gen_fn t i, u⟫_ℝ ≤ ⟪prune_cusp t, u⟫_ℝ ∧
+(∀ i : fin k.succ, ⟪prune_gen_fn t i, u⟫_ℝ ≤ ⟪prune_cusp t, u⟫_ℝ) ∧
 prune_cusp t ≠ prune_secondary t
 
 noncomputable def prune_direction {k : ℕ}

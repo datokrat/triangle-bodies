@@ -23,4 +23,16 @@ lemma msupport_subset_of_tendsto
 msupport lμ ⊆ closure (⋃ (n : ℕ), msupport (μ n)) :=
 sorry
 
+instance finite_measure_val {α : Type} [measurable_space α] {μ : measure_theory.finite_measure α} :
+measure_theory.is_finite_measure μ.val := μ.property
+
+noncomputable def finite_measure_map {α β : Type}
+[measurable_space α] [measurable_space β]
+(f : α → β)
+(μ : measure_theory.finite_measure α) : measure_theory.finite_measure β :=
+begin
+  refine ⟨measure_theory.measure.map f μ.val, _⟩,
+  exact measure_theory.measure.is_finite_measure_map μ f,
+end
+
 end msupport

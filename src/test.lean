@@ -62,5 +62,6 @@ begin
   replace hx : ⟪(J x), v⟫_ℝ ≥ ⟪(J y), v⟫_ℝ := sorry,
   have : ∀ a b : ℝ, a ≥ b ↔ a - b ≤ 0 := sorry,
   rw [this ⟪(J x), v⟫_ℝ ⟪(J y), v⟫_ℝ] at hx, -- !??
+  admit,
 end
 

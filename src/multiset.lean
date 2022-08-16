@@ -141,3 +141,16 @@ begin
     simp,
   end
 end
+
+
+lemma ex_maximal_multiset {α : Type} {p : multiset α → Prop}
+{C D : multiset α}
+(hDC : D ≤ C) (h : p D) :
+∃ F : multiset α, F ≤ C ∧ p F ∧
+∀ G : multiset α, F ≤ G → G ≤ C → p G → F = G := sorry
+
+lemma ex_minimal_multiset {α : Type} {p : multiset α → Prop}
+{C D : multiset α}
+(hDC : D ≤ C) (h : p D) :
+∃ F : multiset α, F ≤ C ∧ p F ∧
+∀ G : multiset α, G ≤ F → p G → F = G := sorry

@@ -263,8 +263,51 @@ begin
 end
 
 -- uses pruning lemma
-lemma exists_default_polytope_of_TS_nonzero {k : ℕ} {μ : microid_measure V k}
+/- lemma exists_default_polytope_of_TS_nonzero {k : ℕ} {μ : microid_measure V k}
 (h : TS (microid_of_measure μ).val ≠ 0) (u : metric.sphere (0 : V) 1) :
 ∃ P : microid_generator_space V k, is_default_polytope μ u P := sorry
+ -/
+
+noncomputable def project_generator {k : ℕ} (E : submodule ℝ V)
+(G : microid_generator_space V k) :
+microid_generator_space E k :=
+begin
+  refine ⟨(proj E) ∘ G.val, _⟩,
+  simp only [subtype.val_eq_coe, mem_closed_ball_zero_iff],
+  simp only [pi_norm_le_iff zero_le_one, function.comp_app],
+  intro l,
+  simp only [proj],
+  simp only [continuous_linear_map.to_linear_map_eq_coe,
+    continuous_linear_map.coe_coe, submodule.coe_norm],
+  refine le_trans (continuous_linear_map.le_op_norm (orthogonal_projection E) _) _,
+  refine le_trans (mul_le_mul (orthogonal_projection_norm_le E) (norm_le_pi_norm _ _) (norm_nonneg _) zero_le_one) _,
+  simpa only [one_mul, mem_closed_ball_iff_norm, sub_zero] using G.property,
+end
+
+
+noncomputable def project_microid_measure {k : ℕ} (E : submodule ℝ V) (μ : microid_measure V k) :
+microid_measure E k := finite_measure_map (project_generator E) μ
+
+
+lemma proj_microid_of_measure {k : ℕ}
+(E : submodule ℝ V)
+(μ : microid_measure V k) :
+proj_body E (microid_of_measure μ) = microid_of_measure (project_microid_measure E μ) :=
+sorry
+
+lemma microid_proj_eq_proj_microid {k : ℕ}
+(μ : microid_measure V k)
+(E : submodule ℝ V) :
+microid_of_measure (project_microid_measure E μ) = proj_body E (microid_of_measure μ) :=
+sorry
+
+noncomputable def dirac_microid_measure {k : ℕ}
+(P : microid_generator_space V k) : microid_measure V k :=
+⟨measure_theory.measure.dirac P, sorry⟩ -- trivial
+
+lemma microid_of_dirac_eq {k : ℕ}
+(P : microid_generator_space V k) :
+microid_of_measure (dirac_microid_measure P) = body_of_microid_generator P := sorry
+
 
 end bla

@@ -273,3 +273,11 @@ lemma semicritical_of_le
 (h : C ≤ D)
 (hsc : semicritical_spaces D) :
 semicritical_spaces C := sorry
+
+
+lemma semicritical_spaces_factorization
+(C D : multiset (submodule ℝ V))
+{E : submodule ℝ V}
+(hC : dim E = C.card ∧ multiset_all (λ W, W ≤ E) C)
+(hCD : semicritical_spaces (C + D)) :
+semicritical_spaces (D.map (λ W, W.map (proj Eᗮ))) := sorry

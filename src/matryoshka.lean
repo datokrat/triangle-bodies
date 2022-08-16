@@ -19,56 +19,15 @@ section definitions
 variables (V : Type)
 [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
-
-lemma ex_maximal_multiset {α : Type} {p : multiset α → Prop}
-{C D : multiset α}
-(hDC : D ≤ C) (h : p D) :
-∃ F : multiset α, F ≤ C ∧ p F ∧
-∀ G : multiset α, F ≤ G → G ≤ C → p G → F = G := sorry
-
-lemma ex_minimal_multiset {α : Type} {p : multiset α → Prop}
-{C D : multiset α}
-(hDC : D ≤ C) (h : p D) :
-∃ F : multiset α, F ≤ C ∧ p F ∧
-∀ G : multiset α, G ≤ F → p G → F = G := sorry
-
 end definitions
 
 section preparation_lemmas
 
 variables {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
-noncomputable def project_generator {k : ℕ} (E : submodule ℝ V)
-(G : microid_generator_space V k) :
-microid_generator_space E k :=
-begin
-  refine ⟨(proj E) ∘ G.val, _⟩,
-  simp only [subtype.val_eq_coe, mem_closed_ball_zero_iff],
-  simp only [pi_norm_le_iff zero_le_one, function.comp_app],
-  intro l,
-  simp only [proj],
-  simp only [continuous_linear_map.to_linear_map_eq_coe,
-    continuous_linear_map.coe_coe, submodule.coe_norm],
-  refine le_trans (continuous_linear_map.le_op_norm (orthogonal_projection E) _) _,
-  refine le_trans (mul_le_mul (orthogonal_projection_norm_le E) (norm_le_pi_norm _ _) (norm_nonneg _) zero_le_one) _,
-  simpa only [one_mul, mem_closed_ball_iff_norm, sub_zero] using G.property,
-end
-
-noncomputable def project_microid_measure {k : ℕ} (E : submodule ℝ V) (μ : microid_measure V k) :
-microid_measure E k := finite_measure_map (project_generator E) μ
-
 noncomputable def TS_microid_measure {k : ℕ} (u : metric.sphere (0 : V) 1) (μ : microid_measure V k) :
 submodule ℝ V :=
 TS (microid_of_measure μ).val u.val
-
-noncomputable def dirac_microid_measure {k : ℕ}
-(P : microid_generator_space V k) : microid_measure V k :=
-⟨measure_theory.measure.dirac P, sorry⟩ -- trivial
-
-lemma microid_of_dirac_eq {k : ℕ}
-(P : microid_generator_space V k) :
-microid_of_measure (dirac_microid_measure P) = body_of_microid_generator P := sorry
-
 end preparation_lemmas
 
 
@@ -104,12 +63,6 @@ noncomputable def pair_to_TS {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) : submodule ℝ V :=
 TS (pair_to_microid pair).val u
-
-lemma proj_microid_of_measure {k : ℕ}
-(E : submodule ℝ V)
-(μ : microid_measure V k) :
-proj_body E (microid_of_measure μ) = microid_of_measure (project_microid_measure E μ) :=
-sorry
 
 noncomputable def reduce_pair {k : ℕ}
 {u : metric.sphere (0 : V) 1}
@@ -819,20 +772,11 @@ lemma le_sum_multiset_of_mem
 {C : multiset (submodule ℝ V)}
 {E : submodule ℝ V}
 (h : E ∈ C) :
-E ≤ C.sum := sorry
-
-lemma semicritical_spaces_factorization
-(C D : multiset (submodule ℝ V))
-{E : submodule ℝ V}
-(hC : dim E = C.card ∧ multiset_all (λ W, W ≤ E) C)
-(hCD : semicritical_spaces (C + D)) :
-semicritical_spaces (D.map (λ W, W.map (proj Eᗮ))) := sorry
-
-lemma microid_proj_eq_proj_microid {k : ℕ}
-(μ : microid_measure V k)
-(E : submodule ℝ V) :
-microid_of_measure (project_microid_measure E μ) = proj_body E (microid_of_measure μ) :=
-sorry
+E ≤ C.sum :=
+begin
+  rcases multiset.exists_cons_of_mem h with ⟨D, rfl⟩,
+  simp only [multiset.sum_cons, submodule.add_eq_sup, le_sup_left],
+end
 
 lemma TS_microid_proj_eq_proj_TS_microid {k : ℕ}
 (μ : microid_measure V k)
@@ -851,7 +795,10 @@ end
 lemma TS_default_body_eq_TS_default_measure (k : ℕ)
 (u : metric.sphere (0 : V) 1) (x : microid_pair k u) :
 TS (pair_to_default_body x).val u.val = TS_microid_measure u (pair_to_default_measure x) :=
-sorry
+begin
+  simp only [TS_microid_measure, pair_to_default_measure, pair_to_default_body,
+    microid_of_dirac_eq, body_of_poly_of_gen_eq],
+end
 
 section blabb
 
@@ -861,7 +808,39 @@ lemma u_mem_sum_TS_orth
 {E : submodule ℝ V}
 (A : multiset (microid_pair k u))
 (h : E = (A.map pair_to_TS).sum) :
-u.val ∈ Eᗮ := sorry
+u.val ∈ Eᗮ :=
+begin
+  revert E,
+  induction A using pauls_multiset_induction,
+  {
+    intros E h,
+    simp only [multiset.map_zero, multiset.sum_zero, submodule.zero_eq_bot] at h,
+    simp only [h, submodule.bot_orthogonal_eq_top],
+  },
+  {
+    intros E h,
+    simp only [multiset.map_cons, multiset.sum_cons, submodule.add_eq_sup] at h,
+    simp only [h],
+    intros x hx,
+    simp only [submodule.mem_sup] at hx,
+    rcases hx with ⟨y, hy, z, hz, rfl⟩,
+    simp only [inner_add_left],
+    convert add_zero (0 : ℝ),
+    {
+      apply inner_left_of_mem_orthogonal_singleton,
+      simp only [pair_to_TS] at hy,
+      exact TS_le_uperp _ _ hy,
+    },
+    {
+      exact A_ᾰ rfl z hz,
+    },
+  },
+end
+
+lemma map_lambda
+{α β : Type}
+(f : α → β) (C : multiset α) :
+C.map f = C.map (λ x, f x) := rfl
 
 lemma semicritical_subprojection
 {k : ℕ}
@@ -870,21 +849,39 @@ lemma semicritical_subprojection
 (E : submodule ℝ V)
 (SP : multiset (microid_measure Eᗮ k))
 (hAE : E = (A.map pair_to_TS).sum)
-(hA1 : multiset_all (λ x, pair_to_default_space x = pair_to_TS x) A)
 (hA2 : dim E = A.card)
 (hB : semicritical_spaces ((A + B).map pair_to_TS))
 (hSP : SP = B.map (project_microid_measure Eᗮ ∘ pair_to_measure)):
 semicritical_spaces
-(SP.map (TS_microid_measure (uncoe_sph Eᗮ u (u_mem_sum_TS_orth A hAE)))) := sorry
+(SP.map (TS_microid_measure (uncoe_sph Eᗮ u (u_mem_sum_TS_orth A hAE)))) :=
+begin
+  simp only [hSP],
+  rw [multiset.map_map, map_lambda],
+  simp only [function.comp_app, TS_microid_measure,
+    microid_proj_eq_proj_microid, proj_body, uncoe_sph],
+  simp only [←TS_orthogonal_projection],
+  let C := A.map pair_to_TS,
+  let D := B.map pair_to_TS,
+  suffices hD : semicritical_spaces (D.map (λ W, W.map (proj Eᗮ))),
+  {
+    simpa only [D, multiset.map_map, map_lambda, function.comp_app] using hD,
+  },
+  simp only [multiset.map_add] at hB,
+  change semicritical_spaces (C + D) at hB,
+  refine semicritical_spaces_factorization _ _ _ hB,
+  refine ⟨_, _⟩,
+  {
+    simpa only [C, multiset.card_map] using hA2,
+  },
+  {
+    intros F hF,
+    simp only [hAE],
+    apply le_sum_multiset_of_mem,
+    exact hF,
+  },
+end
 
 end blabb
-
-lemma coe_uncoe_sph {E : submodule ℝ V}
-(u : metric.sphere (0 : V) 1)
-(uE : u.val ∈ E) :
-coe_sph E (uncoe_sph E u uE) = u := sorry
-
-#exit
 
 --set_option pp.implicit true
 theorem matryoshka_principle {k : ℕ}
@@ -902,7 +899,11 @@ begin
   unfreezingI {
     induction n₀ with n₀ ih generalizing n μs V,
     {
-      have : μs = ∅ := sorry,
+      have : μs = ∅,
+      {
+        rw [multiset.empty_eq_zero, ←multiset.card_eq_zero, hdim3],
+        simpa only [le_zero_iff] using hn,
+      },
       rw [this],
       simp only [multiset.empty_eq_zero, multiset.map_zero, bm.area_empty],
     },
@@ -964,7 +965,7 @@ begin
           simp only [pair_to_space_pair, pair_to_default_space,
             pair_to_default_body, convex_body_of_polytope],
           have is_default_poly := c.snd.2,
-          exact is_default_poly.2.1,
+          exact is_default_poly.2.2.1,
         },
       end,
       rcases this with ⟨A, B, h⟩,
@@ -1119,15 +1120,7 @@ begin
             function.comp_app, TS_reduce_eq_default_space],
         },
       },
-      have sc_sp :=
-      begin
-        refine semicritical_subprojection A B E SP rfl _ dimE sc_AB rfl,
-        {
-          intros x hx,
-          rcases multiset.mem_map.mp hx with ⟨y, hy, rfl⟩,
-          apply default_space_eq_TS_of_reduced,
-        },
-      end,
+      have sc_sp := semicritical_subprojection A B E SP rfl dimE sc_AB rfl,
       have cardSP : A.card + SP.card = n,
       {
         simp only [multiset.card_map, map_add],

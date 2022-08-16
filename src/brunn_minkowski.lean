@@ -34,7 +34,10 @@ def coll_res_amb
 C.map (set_res_amb E)
 
 def coe_sph (E : submodule ℝ V) : metric.sphere (0 : E) 1 → metric.sphere (0 : V) 1 :=
-sorry
+begin
+  intro x,
+  refine ⟨x.val.val, x.property⟩,
+end
 
 def uncoe_sph (E : submodule ℝ V) (u : metric.sphere (0 : V) 1)
 (uE : u.val ∈ E) : metric.sphere (0 : E) 1 :=
@@ -42,6 +45,16 @@ begin
   refine ⟨⟨u, uE⟩, _⟩,
   simp only [mem_sphere_zero_iff_norm, submodule.coe_norm, submodule.coe_mk,
              norm_eq_of_mem_sphere],
+end
+
+lemma coe_uncoe_sph {E : submodule ℝ V}
+(u : metric.sphere (0 : V) 1)
+(uE : u.val ∈ E) :
+coe_sph E (uncoe_sph E u uE) = u :=
+begin
+  simp only [coe_sph, uncoe_sph],
+  apply subtype.coe_injective,
+  simp only [subtype.coe_eta],
 end
 
 namespace bm

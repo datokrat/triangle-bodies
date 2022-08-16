@@ -154,6 +154,12 @@ begin
   refine is_open.preimage cc h,
 end
 
+lemma relopen_iff_open {A : set V} (hA : vector_span ℝ A = ⊤) :
+is_relopen A ↔ is_open A := sorry
+
+lemma relint_eq_int {A : set V} (hA : vector_span ℝ A = ⊤) :
+relint A = interior A := sorry
+
 theorem cl_relint {A : set V} (h : convex ℝ A) :
 is_closed A → closure (relint A) = A := sorry
 

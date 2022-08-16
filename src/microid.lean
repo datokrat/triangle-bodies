@@ -114,6 +114,9 @@ end
 def microid_of_measure {k : ℕ} (μ : microid_measure V k) :
 convex_body V := sorry
 
+lemma supp_microid_eq_integral {k : ℕ} (μ : microid_measure V k) :
+(microid_of_measure μ).supp = (λ u, ∫ G in msupport μ, (body_of_microid_generator G).supp u ∂μ.val) := sorry
+
 lemma msupport_microid_eq_closure {k : ℕ}
 (μ : microid_measure V k)
 {C : multiset (convex_body V)}
@@ -137,6 +140,7 @@ lemma cuspy_generators_of_cuspy {k : ℕ} {μ : microid_measure V k.succ} {u : V
 
 def is_default_polytope {k : ℕ} (μ : microid_measure V k) (u : metric.sphere (0 : V) 1)
 (P : microid_generator_space V k) :=
+0 ∈ (polytope_of_microid_generator P).val ∧
 vector_span ℝ (polytope_of_microid_generator P).val ≤ vector_orth u.val ∧
 TS (polytope_of_microid_generator P).val u ≠ 0 ∧
 (∀ C : multiset (convex_body V),

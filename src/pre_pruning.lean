@@ -56,7 +56,9 @@ noncomputable def cuspiness {k : ℕ}
 (u : metric.sphere (0 : V) 1) (t : prune_triple V k) : ℝ :=
 ⟪prune_direction t, u⟫_ℝ / ∥prune_direction t∥
 
-
+noncomputable def cuspiness' {k : ℕ}
+(u : V) (t : prune_triple V k) : ℝ :=
+⟪prune_direction t, u⟫_ℝ / ∥prune_direction t∥
 
 noncomputable def generator_face' {k : ℕ}
 (G : unbounded_microid_generator V k) (u : metric.sphere (0 : V) 1) : finset (fin k.succ) :=

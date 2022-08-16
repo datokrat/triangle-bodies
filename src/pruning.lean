@@ -49,6 +49,24 @@ begin
   {linarith},
 end
 
+lemma zero_mem_norm_generator {k : ℕ}
+(G : microid_generator_space V k) :
+(norm_generator G).val 0 = 0 :=
+begin
+  simp only [body_of_microid_generator, norm_generator, norm_generator'],
+  simp only [scale_translate_gen, scale_gen, translate_gen, add_right_neg, smul_zero],
+end
+
+/- lemma zero_mem_of_tendsto
+(t : ℕ → convex_body V)
+(tl : convex_body V)
+(htt : filter.tendsto t filter.at_top (𝓝 tl))
+(hmem : ∀ n : ℕ, (0 : V) ∈ (t n).val) :
+(0 : V) ∈ tl.val :=
+begin
+  admit,
+end -/
+
 lemma pruning_lemma' {k : ℕ} {u : metric.sphere (0 : V) 1}
 {t : ℕ → prune_triple V k}
 (valid : ∀ n : ℕ, valid_prune_triple (t n) u)
@@ -56,6 +74,7 @@ lemma pruning_lemma' {k : ℕ} {u : metric.sphere (0 : V) 1}
 (tt : filter.tendsto ((cuspiness u) ∘ t) filter.at_top (𝓝 (0 : ℝ))) :
 ∃ (c : ℕ) (G : microid_generator_space V c),
 c ≤ k ∧
+(0 : V) ∈ (polytope_of_microid_generator G).val ∧
 vector_span ℝ (polytope_of_microid_generator G).val ≠ ⊥ ∧
 vector_span ℝ (polytope_of_microid_generator G).val ≤ vector_orth u.val ∧
 in_combinatorial_closure u
@@ -86,7 +105,28 @@ begin
   -- change ∀ (n : ℕ), b ∈ (s ∘ ϕ) n at hb,
   rcases pre_pruning_lemma hm
     with ⟨c, φ, ϕ₂, tl, clek, ⟨hmon, htt, hg, ha⟩, exU⟩,
-  refine ⟨c, tl, clek, _, _, _⟩,
+  refine ⟨c, tl, clek, _, _, _, _⟩,
+  {
+    have := filter.tendsto.comp
+      --(continuous_at_apply 0 _)
+      continuous_at_subtype_coe
+      htt,
+    replace := filter.tendsto.comp
+      (continuous_at_apply 0 _)
+      this,
+    replace : filter.tendsto 0 filter.at_top (𝓝 (tl.val 0)),
+    {
+      convert this,
+      funext,
+      simp only [prunenorm_generator, function.comp_app, ←subtype.val_eq_coe],
+      rw[zero_mem_norm_generator _],
+      refl,
+    },
+    simp only [polytope_of_microid_generator],
+    apply subset_convex_hull ℝ,
+    refine ⟨0, _⟩,
+    exact tendsto_nhds_unique this tendsto_const_nhds,
+  },
   {
     suffices h : diam_generator' tl.val = 1,
     {
@@ -260,6 +300,7 @@ lemma pruning_lemma {k : ℕ} {u : metric.sphere (0 : V) 1}
 (valid : ∀ n : ℕ, valid_prune_triple (t n) u)
 (tt : filter.tendsto ((cuspiness u) ∘ t) filter.at_top (𝓝 (0 : ℝ))) :
 ∃ (G : microid_generator_space V k),
+(0 : V) ∈ (polytope_of_microid_generator G).val ∧
 vector_span ℝ (polytope_of_microid_generator G).val ≠ ⊥ ∧
 vector_span ℝ (polytope_of_microid_generator G).val ≤ vector_orth u.val ∧
 in_combinatorial_closure u

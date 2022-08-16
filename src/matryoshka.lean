@@ -1,5 +1,5 @@
 import convex convex_body linalg measure touching_cone brunn_minkowski
-  microid criticality pruning
+  microid criticality pruning locally_linear arithmetic
   analysis.convex.basic
   data.multiset.basic
   measure_theory.measure.measure_space
@@ -135,18 +135,6 @@ begin
   function.comp_app, function.comp_app],
 end
 
-lemma span_reduced_microid_eq_TS {k : ℕ}
-{u : metric.sphere (0 : V) 1} :
-span_of_convex_body ∘ pair_to_microid ∘ (reduce_pair : microid_pair k u → microid_pair k u) =
-pair_to_TS ∘ (reduce_pair : microid_pair k u → microid_pair k u) :=
-begin
-  funext,
-  simp only [function.comp_app],
-  simp only [reduced_microid_eq_default_body, pair_to_default_body, pair_to_TS],
-  simp only [convex_body_of_polytope, polytope_of_microid_generator],
-  admit,
-end
-
 lemma nface_eq_self_of_vspan_mem_uperp {A : set V} {u : V}
 (h : vector_span ℝ A ≤ vector_orth u) : normal_face A u = A :=
 begin
@@ -173,23 +161,67 @@ begin
   },
 end
 
+lemma span_reduced_microid_eq_TS (k : ℕ)
+(u : metric.sphere (0 : V) 1) :
+span_of_convex_body ∘ pair_to_microid ∘ (reduce_pair : microid_pair k u → microid_pair k u) =
+pair_to_TS ∘ (reduce_pair : microid_pair k u → microid_pair k u) :=
+begin
+  funext pair,
+  simp only [function.comp_app],
+  simp only [reduced_microid_eq_default_body, pair_to_default_body, pair_to_TS],
+  simp only [convex_body_of_polytope],
+  have is_poly := (polytope_of_microid_generator pair.2.1).property,
+  rw [TS_poly_eq_vspan_face is_poly],
+  rcases pair.2.2 with ⟨h0, h1, h2, h3⟩,
+  rw [←subtype.val_eq_coe, nface_eq_self_of_vspan_mem_uperp h1],
+  simp only [span_of_convex_body],
+end
+
+lemma subset_diff {A : set V} (h : (0 : V) ∈ A) : A ⊆ diff A :=
+begin
+  intros v vA,
+  refine ⟨v, 0, vA, h, _⟩,
+  simp only [vsub_eq_sub, sub_zero],
+end
+
+lemma vspan_eq_span_of_mem_zero {A : set V} (h : (0 : V) ∈ A) :
+vector_span ℝ A = submodule.span ℝ A :=
+begin
+  apply le_antisymm,
+  {
+    simp only [vector_span, submodule.span_le],
+    rintro x ⟨a, b, ha, hb, rfl⟩,
+    simp only [vsub_eq_sub, set_like.mem_coe],
+    refine submodule.sub_mem _ _ _,
+    all_goals {
+      apply submodule.subset_span,
+      assumption,
+    },
+  },
+  {
+    simp only [vector_span],
+    apply submodule.span_mono,
+    exact subset_diff h,
+  },
+end
+
 lemma reduced_microid_subset_TS {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair : microid_pair k u) :
 (pair_to_microid (reduce_pair pair)).val ⊆ pair_to_TS (reduce_pair pair) :=
 begin
-  simp only [reduced_microid_eq_default_body, pair_to_default_body, pair_to_TS],
-  simp only [convex_body_of_polytope],
-  have is_poly := (polytope_of_microid_generator pair.2.1).property,
-  -- simp only [polytope_of_microid_generator] at is_poly,
-  rw [TS_poly_eq_vspan_face is_poly],
-  rcases pair.2.2 with ⟨h1, h2, h3⟩,
-  rw [←subtype.val_eq_coe, nface_eq_self_of_vspan_mem_uperp h1],
-  -- apply submodule.subset_span, PROBLEM: doesn't have to be subset?
-  -- Solutions: either have default polytopes contain zero or
-  -- replace convex_body_subset by a vector_span criterion in bm
-  -- also, do span_reduced... first
-  admit,
+  refine subset_trans submodule.subset_span
+    (subset_of_eq (congr_arg coe _)),
+  revert pair,
+  have := function.funext_iff.mp (span_reduced_microid_eq_TS k u),
+  convert this,
+  ext,
+  refine forall_congr _,
+  simp only [function.comp_app, span_of_convex_body],
+  intro pair,
+  rw [reduced_microid_eq_default_body, pair_to_default_body,
+    convex_body_of_polytope, subtype.val_eq_coe, subtype.coe_mk],
+  rw [vspan_eq_span_of_mem_zero (pair.2.2.1)],
 end
 
 noncomputable def pair_to_default_space {k : ℕ}
@@ -236,6 +268,314 @@ noncomputable def paircol_span {k : ℕ}
 (D : multiset (microid_pair k u)) : submodule ℝ V :=
 (D.map pair_to_default_space).sum
 
+lemma nonempty_prune_triple {k : ℕ} : nonempty (prune_triple V k) :=
+begin
+  refine ⟨⟨⟨0, _⟩, 0, 0⟩⟩,
+  simp only [mem_closed_ball_zero_iff, norm_zero, zero_le_one],
+end
+
+lemma cuspiness_lipschitz {k : ℕ}
+(tr : prune_triple V k)
+(u v : V) :
+|cuspiness' u tr - cuspiness' v tr| ≤ dist u v :=
+begin
+  simp only [cuspiness', ←sub_div, ←inner_sub_right, abs_div],
+  simp only [←is_R_or_C.abs_to_real],
+  refine le_trans (div_le_div_of_le_right
+    (abs_inner_le_norm (prune_direction tr) (u - v)) _) _,
+  {
+    apply is_R_or_C.abs_nonneg,
+  },
+  {
+    simp only [is_R_or_C.abs_to_real,
+      abs_eq_self.mpr (norm_nonneg _)],
+    apply div_le_of_nonneg_of_le_mul,
+    {
+      apply norm_nonneg,
+    },
+    {
+      apply dist_nonneg,
+    },
+    {
+      conv {to_lhs, rw [mul_comm]},
+      apply mul_le_mul_of_nonneg_right _ (norm_nonneg _),
+      simp only [←dist_eq_norm, subtype.dist_eq],
+    },
+  },
+end
+
+lemma support_locally_linear_of_cuspy {k : ℕ}
+{G : microid_generator_space V k}
+{u : metric.sphere (0 : V ) 1}
+{ε : ℝ}
+(εpos : ε > 0)
+(h : ∀ tr : prune_triple V k,
+valid_prune_triple tr u → (prune_triple_generator tr) = G → cuspiness u tr ≥ ε) :
+supp_locally_linear (metric.ball u.val ε) (body_of_microid_generator G) :=
+begin
+  rw [normal_face_singleton_iff_locally_linear metric.is_open_ball],
+  rcases generator_face_nonempty G u with ⟨m, hm⟩,
+  refine ⟨G.val m, _⟩,
+  intros v hv,
+  simp only [body_of_microid_generator, convex_body.normal_face],
+  simp only [normal_face_spanned_by_verts],
+  convert convex_hull_singleton (G.val m),
+  have lem : ∀ l : fin k.succ, G.val l ≠ G.val m →
+    ⟪G.val m - G.val l, v⟫_ℝ > 0,
+  {
+    intros l hh,
+    let tr : prune_triple V k := ⟨G, m, l⟩,
+    have valid : valid_prune_triple tr u,
+    {
+      simp only [valid_prune_triple,
+      prune_cusp, prune_cusp_index,
+      prune_secondary, prune_secondary_index,
+      prune_gen_fn, tr],
+      split,
+      {
+        simp only [generator_face, finset.mem_coe, finset.mem_filter] at hm,
+        exact hm.2,
+      },
+      {tauto},
+    },
+    have := h tr valid rfl,
+    change cuspiness' u.val tr ≥ ε at this,
+    replace : cuspiness' v tr > 0,
+    {
+      refine lt_of_lt_of_le _ (ge_sub_abs (cuspiness' v tr) (cuspiness' u.val tr)),
+      refine lt_of_lt_of_le _ (sub_le_sub this (cuspiness_lipschitz _ _ _)),
+      simpa only [metric.mem_ball, sub_pos] using hv,
+    },
+    {
+      simp only [cuspiness', prune_direction,
+        prune_cusp, prune_secondary,
+        prune_cusp_index, prune_secondary_index,
+        prune_gen_fn, tr] at this,
+      exact dividend_pos this (norm_nonneg _),
+    },
+  },
+  apply subset_antisymm,
+  {
+    intros x hx,
+    simp only [set.mem_singleton_iff],
+    simp only [generator_face, finset.mem_coe, finset.mem_filter] at hm,
+    simp only [mem_normal_face] at hx,
+    rcases hx.1 with ⟨l, hl, rfl⟩,
+    by_contra hh,
+    suffices c : ⟪G.val m - G.val l, v⟫_ℝ > 0,
+    {
+      simp only [inner_sub_left, gt_iff_lt, sub_pos] at c,
+      replace hx := hx.2 (G.val m) (set.mem_range_self _),
+      linarith,
+    },
+    {
+      exact lem l hh,
+    },
+  },
+  {
+    simp only [set.singleton_subset_iff, mem_normal_face],
+    refine ⟨set.mem_range_self _, _⟩,
+    intros y hy,
+    rcases hy with ⟨l, rfl⟩,
+    by_cases hh : G.val l = G.val m,
+    {
+      simp only [hh],
+      apply le_refl,
+    },
+    {
+      apply le_of_lt,
+      rw [←sub_pos, ←inner_sub_left],
+      exact lem l hh,
+    },
+  },
+end
+
+/- lemma vector_span_ball {x : V} {ε : ℝ} (εpos : ε > 0) :
+vector_span ℝ (metric.ball x ε) = ⊤ := sorry -/
+
+lemma span_top_of_ball_subset {A : set V} {x : V} {ε : ℝ} (εpos : ε > 0)
+(h : metric.ball x ε ⊆ A) : submodule.span ℝ A = ⊤ :=
+begin
+  simp only [←top_le_iff],
+  rintro v -,
+  by_cases he : v = x,
+  {
+    rw [he],
+    apply submodule.subset_span,
+    apply h,
+    apply metric.mem_ball_self εpos,
+  },
+  let w := (ε / (2 * ∥v - x∥)) • (v - x) + x,
+  have hz := he ∘ norm_sub_eq_zero_iff.mp,
+  have hpos := norm_sub_pos_iff.mpr he,
+  have hw : w ∈ submodule.span ℝ A,
+  {
+    simp only [w],
+    apply submodule.subset_span,
+    apply h,
+    simp only [metric.mem_ball, dist_eq_norm],
+    simp only [one_div, mul_inv_rev, add_sub_cancel, norm_smul],
+    simp only [real.norm_eq_abs, abs_div, abs_mul, abs_two, abs_norm_eq_norm],
+    simp only [abs_eq_self.mpr (le_of_lt εpos), div_mul_eq_div_div],
+    simp only [div_mul],
+    rw [div_self hz, div_one],
+    exact half_lt_self εpos,
+  },
+  have hx : x ∈ submodule.span ℝ A,
+  {
+    apply submodule.subset_span,
+    apply h,
+    apply metric.mem_ball_self εpos,
+  },
+  have hvw : v = (2 * ∥v - x∥ / ε) • (w - x) + x,
+  {
+    simp only [w, add_sub_cancel, smul_smul],
+    rw [div_mul_div_cancel _ (ne_of_gt εpos)],
+    rw [div_self (double_ne_zero hz)],
+    simp only [one_smul, sub_add_cancel],
+  },
+  rw [hvw],
+  refine submodule.add_mem _ _ _,
+  {
+    refine submodule.smul_mem _ _ _,
+    refine submodule.sub_mem _ _ _,
+    all_goals {assumption},
+  },
+  {assumption},
+end
+
+lemma vector_span_top_of_ball_subset {A : set V} {x : V} {ε : ℝ} (εpos : ε > 0)
+(h : metric.ball x ε ⊆ A) : vector_span ℝ A = ⊤ :=
+begin
+  simp only [vector_span],
+  suffices hh : metric.ball 0 ε ⊆ diff A,
+  {
+    exact span_top_of_ball_subset εpos hh,
+  },
+  intros y hy,
+  simp only [metric.mem_ball] at hy,
+  refine ⟨x + y, x, _, _, _⟩,
+  {
+    apply h,
+    simp only [metric.mem_ball, dist_self_add_left],
+    simpa only [dist_eq_norm, sub_zero] using hy,
+  },
+  {
+    apply h,
+    exact metric.mem_ball_self εpos,
+  },
+  {
+    simp only [vsub_eq_sub, add_sub_cancel'],
+  },
+end
+
+/- lemma lemma_vspan_subset_span {A : set V} :
+(vector_span ℝ A : set V) ⊆ submodule.span ℝ A :=
+begin
+  simp only [vector_span],
+end -/
+
+lemma zero_normal_face_eq (A : set V) :
+normal_face A 0 = A :=
+begin
+  ext,
+  simp only [normal_face, set.mem_set_of],
+  split,
+  {
+    intro h,
+    exact h.1,
+  },
+  {
+    intro h,
+    refine ⟨h, _⟩,
+    simp only [inner_zero_right],
+    intros y hy,
+    apply le_refl,
+  }
+end
+
+lemma orthogonal_projection_eq_zero_iff (E : submodule ℝ V) :
+Eᗮ = 0 ↔ E = ⊤ :=
+begin
+  exact submodule.orthogonal_eq_bot_iff,
+end
+
+/- lemma normal_face_by_supp (K : convex_body V) (u : V) :
+(normal_face K.val u) = { x : V | x ∈ K.val ∧ ⟪x, u⟫_ℝ = K.supp u } := sorry
+ -/
+
+lemma TS_zero_of_cuspy_generators {k : ℕ}
+{μ : microid_measure V k}
+{u : metric.sphere (0 : V) 1}
+{ε : ℝ}
+(εpos : ε > 0)
+(h : ∀ (tr : prune_triple V k),
+valid_prune_triple tr u → prune_triple_generator tr ∈ msupport μ → cuspiness u tr ≥ ε) :
+TS_microid_measure u μ = 0 :=
+begin
+  suffices hε : metric.ball u.val ε ⊆ pre_touching_cone (microid_of_measure μ).val u,
+  {
+    have span_top : vector_span ℝ (pre_touching_cone (microid_of_measure μ).val u) = ⊤,
+    {
+      refine vector_span_top_of_ball_subset εpos hε,
+    },
+    have : pre_touching_cone (microid_of_measure μ).val u =
+      touching_cone (microid_of_measure μ).val u,
+    {
+      refine touching_cone_unique_face _ _ _ _ _,
+      {
+        conv {
+          congr, skip,
+          rw [←zero_normal_face_eq (pre_touching_cone (microid_of_measure μ).val u)],
+        },
+        exact normal_face_is_face (pre_touching_cone_convex _ _) 0,
+      },
+      rw [relint_eq_int (vector_span_top_of_ball_subset εpos hε), mem_interior],
+      exact ⟨metric.ball u.val ε, hε, metric.is_open_ball, metric.mem_ball_self εpos⟩,
+    },
+    simp only [TS_microid_measure, TS, orthogonal_projection_eq_zero_iff],
+    rw [this] at hε,
+    refine span_top_of_ball_subset εpos hε,
+  },
+  intros v hv,
+  simp only [pre_touching_cone, outer_normal_cone, set.mem_set_of],
+  suffices ll : supp_locally_linear (metric.ball u.val ε)
+    (microid_of_measure μ),
+  {
+    rcases ll with ⟨x, ll⟩,
+    rw [normal_face_singleton_iff_locally_linear_with (metric.is_open_ball)] at ll,
+    simp only [convex_body.normal_face] at ll,
+    rw [ll v hv, ll ↑u (metric.mem_ball_self εpos)],
+  },
+  {
+    apply microid_supp_locally_linear_of_generators,
+    intros G hG,
+    apply support_locally_linear_of_cuspy εpos,
+    intros tr valid htrG,
+    refine h tr valid _,
+    rw [htrG],
+    exact hG,
+  },
+end
+
+lemma cuspiness_nonneg {k : ℕ}
+{tr : prune_triple V k}
+{u : metric.sphere (0 : V) 1}
+(h : valid_prune_triple tr u) : cuspiness u tr ≥ 0 :=
+begin
+  simp only [valid_prune_triple] at h,
+  simp only [cuspiness, prune_direction,
+    prune_cusp, prune_cusp_index,
+    prune_secondary, prune_secondary_index,
+    prune_gen_fn] at h ⊢,
+  apply div_nonneg,
+  {
+    simp only [inner_sub_left, sub_nonneg],
+    tauto,
+  },
+  {apply norm_nonneg},
+end
+
 lemma exists_prune_triple_seq {k : ℕ}
 {μ : microid_measure V k}
 {u : metric.sphere (0 : V) 1}
@@ -245,10 +585,74 @@ lemma exists_prune_triple_seq {k : ℕ}
 (∀ n : ℕ, prune_triple_generator (t n) ∈ msupport μ) ∧
 filter.tendsto ((cuspiness u) ∘ t) filter.at_top (𝓝 (0 : ℝ)) :=
 begin
-  admit,
+  suffices hex : ∀ ε : ℝ,
+  ∃ tr : prune_triple V k, ε > 0 →
+  valid_prune_triple tr u ∧
+  prune_triple_generator tr ∈ msupport μ ∧ cuspiness u tr < ε,
+  {
+    choose tℝ htℝ using hex,
+    rcases exists_seq_strict_anti_tendsto (0 : ℝ)
+      with ⟨ε, -, εpos, εtt⟩,
+    let t := tℝ ∘ ε,
+    refine ⟨t, _, _, _⟩,
+    {
+      intro n,
+      exact (htℝ (ε n) (εpos n)).1,
+    },
+    {
+      intro n,
+      exact (htℝ (ε n) (εpos n)).2.1,
+    },
+    {
+      have εtt' := tendsto_nhds_within_of_tendsto_nhds_of_eventually_within
+        _ εtt (filter.eventually_of_forall εpos),
+      have : filter.tendsto (cuspiness u ∘ tℝ) (𝓝[preorder.lt 0] 0) (𝓝 0),
+      {
+        simp only [filter.tendsto_iff_eventually],
+        intros p ep,
+        simp only [filter.has_basis.eventually_iff metric.nhds_basis_ball] at ep,
+        simp only [filter.has_basis.eventually_iff metric.nhds_within_basis_ball,
+          function.comp_app],
+        rcases ep with ⟨i, ipos, hi⟩,
+        refine ⟨i, ipos, _⟩,
+        rintro x ⟨hx, xpos⟩,
+        apply hi,
+        simp only [real.ball_eq_Ioo] at hx ⊢,
+        split,
+        {
+          simp only [zero_sub],
+          refine lt_of_lt_of_le (neg_neg_of_pos ipos) _,
+          apply cuspiness_nonneg,
+          exact (htℝ x xpos).1,
+        },
+        {
+          exact lt_trans (htℝ x xpos).2.2 hx.2,
+        },
+      },
+      have := filter.tendsto.comp this εtt',
+      rw [function.comp.assoc] at this,
+      exact this,
+    },
+  },
+  intros ε,
+  by_cases εpos : ε > 0, rotate,
+  {
+    rcases nonempty_prune_triple with ⟨tr⟩,
+    refine ⟨tr, _⟩,
+    {
+      intro h,
+      contradiction,
+    },
+  },
+  {
+    by_contra hass,
+    push_neg at hass,
+    apply h,
+    apply TS_zero_of_cuspy_generators εpos,
+    intros tr valid htr,
+    exact (hass tr).2 valid htr,
+  },
 end
-
-#exit
 
 lemma exists_pair {k : ℕ}
 {μ : microid_measure V k}
@@ -258,10 +662,10 @@ lemma exists_pair {k : ℕ}
 pair_to_measure p = μ :=
 begin
   rcases exists_prune_triple_seq h with ⟨t, valid, genμ, tt⟩,
-  rcases pruning_lemma valid tt with ⟨G, hnz, hup, hcl⟩,
+  rcases pruning_lemma valid tt with ⟨G, hzm, hnz, hup, hcl⟩,
   refine ⟨⟨μ, G, _⟩, _⟩,
   {
-    refine ⟨hup, _, _⟩,
+    refine ⟨hzm, hup, _, _⟩,
     {
       rw [TS_poly_eq_vspan_face (polytope_of_microid_generator G).property u],
       rw [←subtype.val_eq_coe, nface_eq_self_of_vspan_mem_uperp hup],
@@ -374,7 +778,7 @@ begin
     simp only [multiset.cons_add, multiset.map_cons],
     rw [multiset.add_cons, ←multiset.map_add] at hu,
     have defp := D_a.2.2,
-    refine defp.2.2 _ _ hu,
+    refine defp.2.2.2 _ _ hu,
     simp only [multiset.card_map, multiset.card_add],
     simp only [multiset.card_add, multiset.card_cons] at hdim,
     rw [hdim],

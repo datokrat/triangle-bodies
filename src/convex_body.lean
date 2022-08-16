@@ -208,6 +208,15 @@ instance : has_lift_t (convex_body V) (set V) :=
 lemma coe_zero_body_eq : (coe (0 : convex_body V) : set V) = ({0} : set V) :=
 rfl
 
+noncomputable def convex_body.supp (K : convex_body V) (u : V) : ℝ :=
+finite_support_function K.prop u
+
+def convex_body.normal_face (K : convex_body V) (u : V) : convex_body V :=
+⟨normal_face K.val u, sorry⟩
+
+lemma convex_body.normal_face_supp (K : convex_body V) (u : V) :
+(K.normal_face u).val = { x : V | x ∈ K.val ∧ ⟪x, u⟫_ℝ = K.supp u } := sorry
+
 noncomputable def convex_body_to_positive_homogeneous : convex_body V →+ (V → ℝ) :=
 {
   to_fun := λ K, finite_support_function K.prop,

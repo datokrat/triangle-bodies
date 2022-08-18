@@ -154,13 +154,13 @@ begin
   refine is_open.preimage cc h,
 end
 
-lemma relopen_iff_open {A : set V} (hA : vector_span ℝ A = ⊤) :
-is_relopen A ↔ is_open A := sorry
+-- lemma relopen_iff_open {A : set V} (hA : vector_span ℝ A = ⊤) :
+-- is_relopen A ↔ is_open A := sorry
 
 lemma relint_eq_int {A : set V} (hA : vector_span ℝ A = ⊤) :
 relint A = interior A := sorry
 
-theorem cl_relint {A : set V} (h : convex ℝ A) :
+/- theorem cl_relint {A : set V} (h : convex ℝ A) :
 is_closed A → closure (relint A) = A := sorry
 
 theorem relint_cl {A : set V} (h : convex ℝ A) :
@@ -175,14 +175,14 @@ is_relopen A → is_relopen B → is_relopen (A ∩ B) := sorry
 lemma relint_eq_relint_inter_relint {A B : set V}
 (Acv : convex ℝ A) (BCv: convex ℝ B):
 (relint A ∩ relint B).nonempty →
-relint (A ∩ B) = relint A ∩ relint B := sorry
+relint (A ∩ B) = relint A ∩ relint B := sorry -/
 
-lemma relopen_subspace (E : submodule ℝ V) :
+/- lemma relopen_subspace (E : submodule ℝ V) :
 is_relopen (E : set V) := sorry
 
 lemma relint_coe_invariant {E : submodule ℝ V}
 (A : set E) : E.subtype '' (relint A) = relint (E.subtype '' A) := sorry
-
+ -/
 lemma relint_inter_flat {A : set V} {E : submodule ℝ V}
 {x : V} (xA : x ∈ relint A) (xE : x ∈ E) :
 (⟨x, xE⟩ : E) ∈ relint ((coe : E → V) ⁻¹' A) := sorry

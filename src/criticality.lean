@@ -27,69 +27,6 @@ begin
   simp only [ker_of_complementary_orthogonal_projection E, h],
 end
 
-lemma xyz {C : multiset (set V)} {E : submodule ℝ V}
-: project_subspace Eᗮ (vector_span ℝ C.sum) = vector_span ℝ (project_collection Eᗮ C).sum :=
-begin
-  simp [project_subspace_vector_span, minksum_proj_commute_multiset],
-end
-
-lemma abc {C : multiset (set V)} {E : submodule ℝ V}
-: project_subspace Eᗮ (E + vector_span ℝ C.sum) = vector_span ℝ (project_collection Eᗮ C).sum :=
-begin
-  simp only [project_subspace, submodule.add_eq_sup, submodule.map_sup],
-  rw [←project_subspace_def],
-  simp [zero_projection_of_le, xyz.symm],
-  refl,
-end
-
-lemma z {A : multiset (set V)} {E : submodule ℝ V}
-(h : Π B : multiset (set V),
-B ≤ A → dim (E + (vector_span ℝ B.sum) : submodule ℝ V) ≥ dim E + B.card)
-: semicritical (project_collection Eᗮ A) :=
-begin
-  rintro F Fsub,
-  rcases multiset_exists_of_le_map Fsub with ⟨G, Gsub, G_to_F⟩,
-  let W : submodule ℝ V := E + vector_span ℝ G.sum,
-  have rn := subspace_rank_nullity (orthogonal_projection Eᗮ).to_linear_map W,
-  suffices hsuff : common_dimension F = dim (project_subspace Eᗮ W) ∧
-                   dim E ≥ dim ((proj Eᗮ).ker ⊓ W : submodule ℝ V) ∧
-                   dim W ≥ dim E + F.card,
-  {
-    calc common_dimension F
-       = dim (project_subspace Eᗮ W) : hsuff.1
-  ...  = dim W - dim ((proj Eᗮ).ker ⊓ W : submodule ℝ V) : _
-  ...  ≥ dim W - dim E : nat.sub_le_sub_left (dim W) hsuff.2.1
-  ...  ≥ multiset.card F : _,
-    {
-      rw [dim_finrank, ←rn], -- here is an interesting case I don't understand
-      dsimp only [proj],     -- Why does dsimp work but simp does not?
-      dsimp only [project_subspace],
-      simp,
-    },
-    {
-      -- Natural numbers are hard.
-      rw [←nat.add_sub_cancel (multiset.card F) (dim E), add_comm (multiset.card F)],
-      refine nat.sub_le_sub_right hsuff.2.2 (dim E),
-    }
-  },
-  repeat {split},
-  {
-    -- have : W = E + vector_span ℝ G.sum := rfl,
-    rw [abc, project_collection, G_to_F],
-    refl,
-  },
-  {
-    refine finrank_le_of_le _,
-    refine le_trans inf_le_left _,
-    rw [ker_of_complementary_orthogonal_projection E],
-    exact le_refl E,
-  },
-  {
-    rw [←G_to_F],
-    simp only [multiset.card_map],
-    exact h G Gsub,
-  },
-end
 
 lemma common_dimension_of_empty {a : set V}
 (he : a = ∅) : common_dimension ({a} : multiset (set V)) = 0 :=
@@ -100,8 +37,11 @@ end
 lemma nonempty_of_semicritical {A : multiset (set V)} (hsc : semicritical A)
 (a : set V) (ha : a ∈ A) : a.nonempty :=
 begin
-  by_contradiction,
-  have he : a = ∅ := sorry,
+  by_contradiction h,
+  have he : a = ∅,
+  {
+    simpa only [set.not_nonempty_iff_eq_empty] using h,
+  },
   have : common_dimension {a} = 0 := common_dimension_of_empty he,
   have h2 := hsc {a} (multiset.singleton_le.mpr ha),
   rw [multiset.card_singleton] at h2,
@@ -109,156 +49,170 @@ begin
   linarith,
 end
 
-lemma zz {A B : multiset (set V)} {E : submodule ℝ V}
-(hsc : semicritical (A + B)) (hE : diff A.sum ≤ E) (hdim : dim E ≤ A.card)
-(C : multiset (set V)) (hCB : C ≤ B) :
-dim (E + (vector_span ℝ C.sum) : submodule ℝ V) ≥ dim E + C.card :=
-begin
-  calc dim (E + (vector_span ℝ C.sum) : submodule ℝ V)
-     ≥ dim ((vector_span ℝ A.sum) + (vector_span ℝ C.sum) : submodule ℝ V) : by
-          {
-            apply submodule.finrank_mono,
-            refine sup_le_sup_right _ _,
-            apply submodule.span_le.mpr,
-            assumption,
-          }
-...  = common_dimension (A + C)                                            : by
-          {
-            simp only [common_dimension],
-            rw [multiset.sum_add, vector_span_sum_commute],
-            {
-              apply multiset_sum_nonempty_of_elements,
-              refine nonempty_of_semicritical (subcollection_semicritical (show A ≤ A + B, by simp) hsc),
-            },
-            {
-              apply multiset_sum_nonempty_of_elements,
-              refine nonempty_of_semicritical (subcollection_semicritical (show C ≤ A + B, by { refine le_trans hCB _, simp [hCB] }) hsc),
-            }
-          }
-...  ≥ (A + C).card                                                        : by
-          {
-            have : A + C ≤ A + B := by simp [hCB],
-            refine hsc (A + C) this,
-          }
-...  = A.card + C.card                                                     : multiset.card_add A C
-...  ≥ dim E + C.card                                                      : add_le_add hdim (le_refl _),
-end
-
-lemma subcritical_factorization_3 {C D : multiset (set V)} {E : submodule ℝ V}
-(hE : diff D.sum ≤ E) (hne : ∀ x ∈ C + D, set.nonempty x) :
-common_dimension D + common_dimension (project_collection Eᗮ C) ≤ common_dimension (C + D) :=
-begin
-  let W := vector_span ℝ (C + D).sum,
-  have ss_rn := subspace_rank_nullity (proj Eᗮ) W,
-  suffices h : common_dimension D ≤ dim (((proj Eᗮ).ker ⊓ W): submodule ℝ V) ∧
-    common_dimension (project_collection Eᗮ C) = dim (project_subspace Eᗮ W),
-  {
-    rw [add_comm],
-    calc common_dimension (C + D)
-       = dim W : by refl
-   ... = dim (project_subspace Eᗮ W) + dim ((proj Eᗮ).ker ⊓ W : submodule ℝ V) : ss_rn.symm
-   ... ≥ dim (project_subspace Eᗮ W) + common_dimension D : by simp [h.1]
-   ... = common_dimension (project_collection Eᗮ C) + common_dimension D : by simp [h.2],
-  },
-  split,
-  {
-    refine finrank_le_of_le _,
-    rw [ker_of_complementary_orthogonal_projection E],
-    refine le_inf (submodule.span_le.mpr hE) _,
-    simp only [vector_span],
-    refine submodule.span_mono _,
-    change diff D.sum ⊆ diff (C + D).sum,
-    simp only [multiset.sum_add],
-    refine diff_set_le_add _ _ _,
-    refine multiset_sum_nonempty_of_elements _,
-    intros a haC,
-    refine hne a _,
-    exact multiset.mem_add.mpr (or.inl haC),
-  },
-  {
-    simp only [common_dimension],
-    rw [←xyz],
-    suffices h : project_subspace Eᗮ (vector_span ℝ C.sum) = project_subspace Eᗮ (vector_span ℝ (C + D).sum),
-    {rw [h]},
-    {
-      simp only [multiset.sum_add],
-      have CD_nonempty : C.sum.nonempty ∧ D.sum.nonempty :=
-      begin
-        apply nonempty_sets_of_nonempty_sum,
-        rw [←multiset.sum_add],
-        exact multiset_sum_nonempty_of_elements hne,
-      end,
-      rw [vector_span_sum_commute C.sum D.sum CD_nonempty.1 CD_nonempty.2],
-      simp only [project_subspace, submodule.add_eq_sup, submodule.map_sup, left_eq_sup],
-      refine le_trans _ bot_le,
-      refine eq_bot_iff.mp _,
-      refine zero_projection_of_le _,
-      simp only [vector_span, submodule.span_le],
-      assumption,
-    }
-  }
-end
-
-lemma subcritical_factorization {C D : multiset (set V)} {E : submodule ℝ V}
-(hDC : D ≤ C) (hE : diff D.sum ≤ E) (hdim : finite_dimensional.finrank ℝ E ≤ D.card) :
-semicritical C ↔ (semicritical D ∧ semicritical (project_collection Eᗮ (C - D))) :=
-begin
-  rcases multiset.le_iff_exists_add.mp hDC with ⟨CsubD, rfl⟩,
-  simp only [add_tsub_cancel_left],
-
-  apply iff.intro,
-  begin
-    intro hsc,
-    apply and.intro,
-    exact subcollection_semicritical hDC hsc,
-    simp only [project_collection],
-
-    change semicritical (project_collection Eᗮ CsubD),
-    exact z (zz hsc hE hdim),
-  end,
-  begin
-    rintro ⟨Dsc, Psc⟩,
-    rintro F Fsub,
-    rcases multiset_split_le Fsub with ⟨G, H, hG, hH, rfl⟩,
-    have hGE : diff G.sum ≤ E := begin
-      refine le_trans _ hE,
-      refine diff_multiset_sum_mono hG _,
-      refine nonempty_of_semicritical Dsc,
-    end,
-    have hne : ∀ x ∈ H + G, set.nonempty x := by admit,
-    have sf3 := subcritical_factorization_3 hGE hne,
-    rw [add_comm],
-    
-    calc common_dimension (H + G)
-       ≥ common_dimension G + common_dimension (project_collection Eᗮ H) : sf3
-  ...  ≥ multiset.card G + multiset.card (project_collection Eᗮ H) : by
-            {
-              exact add_le_add
-                (Dsc G hG)
-                (Psc (project_collection Eᗮ H)
-                     (multiset.map_le_map hH)),
-            }
-  ...  = multiset.card (H + G) : by
-            {
-              simp only [project_collection, multiset.card_add, multiset.card_map],
-              rw [add_comm],
-            },
-  end
-end
-
 def semicritical_spaces (C : multiset (submodule ℝ V)) :=
   ∀ τ, τ ≤ C → dim τ.sum ≥ τ.card
 
 def subcritical_spaces (C : multiset (submodule ℝ V)) :=
-  C.card > 0 ∧ ∃ τ, τ ≤ C ∧ dim τ.sum ≤ τ.card
+  ∃ τ, τ ≠ 0 ∧ τ ≤ C ∧ dim τ.sum ≤ τ.card
 
-lemma nonempty_of_subcritical_spaces {C : multiset (submodule ℝ V)}
+def minimally_subcritical_spaces (C : multiset (submodule ℝ V)) :=
+  subcritical_spaces C ∧
+  ∀ D : multiset (submodule ℝ V), D ≤ C ∧ subcritical_spaces D → D = C
+
+def subcritical_collection_nonempty {C : multiset (submodule ℝ V)}
+(h : subcritical_spaces C) : C.card > 0 :=
+begin
+  rcases h with ⟨τ, τne, τle, -⟩,
+  refine lt_of_lt_of_le _ (multiset.card_mono τle),
+  exact multiset.card_pos.mpr τne,
+end
+
+def dim_le_card_of_minimally_subcritical {C : multiset (submodule ℝ V)}
+(h : minimally_subcritical_spaces C) :
+dim C.sum ≤ C.card :=
+begin
+  rcases h.1 with ⟨τ, τne, τle, τdim⟩,
+  rw [←h.2 τ ⟨τle, ⟨τ, τne, le_refl _, τdim⟩⟩],
+  exact τdim,
+end
+
+/- lemma nonempty_of_subcritical_spaces {C : multiset (submodule ℝ V)}
 (h : subcritical_spaces C):
-C.card > 0 := h.1
+C.card > 0 := h.1 -/
+
+noncomputable def prod_sum
+(p : submodule ℝ V × submodule ℝ V) : submodule ℝ V :=
+p.fst + p.snd
+
+lemma semicritical_of_le
+{C D : multiset (submodule ℝ V)}
+(h : C ≤ D)
+(hsc : semicritical_spaces D) :
+semicritical_spaces C :=
+begin
+  simp only [semicritical_spaces] at hsc ⊢,
+  intros τ hτ,
+  exact hsc τ (le_trans hτ h),
+end
+
+lemma semicritical_mono
+{C : multiset (submodule ℝ V × submodule ℝ V)}
+(h : semicritical_spaces (C.map prod.fst)) :
+semicritical_spaces (C.map prod_sum) :=
+begin
+  intros D hD,
+  rcases multiset_exists_of_le_map hD with ⟨D, hD', rfl⟩,
+  have : (prod.fst : submodule ℝ V × submodule ℝ V → submodule ℝ V) ≤ prod_sum,
+  {
+    intro pr,
+    simp only [prod_sum, submodule.add_eq_sup, le_sup_left],
+  },
+  rw [dim_finrank],
+  refine le_trans _ (submodule.finrank_mono (multiset_sum_mono this)),
+  simpa only [multiset.card_map] using h (D.map prod.fst) (multiset.map_mono _ hD'),
+end
+
+-- this should become a helper for semicritical_additivity
+lemma semicritical_additivity'
+{C : multiset (submodule ℝ V × submodule ℝ V)}
+(h : semicritical_spaces (C.map prod_sum)) :
+∃ F G, C = F + G ∧ semicritical_spaces (F.map prod.fst + G.map prod.snd) :=
+begin
+  induction C using pauls_multiset_induction,
+  {
+    refine ⟨0, 0, _, _⟩,
+    {simp only [add_zero]},
+    {
+      simp only [multiset.map_zero, add_zero],
+      tauto,
+    },
+  },
+  {
+    admit,
+  },
+end
+
+lemma semicritical_additivity
+{F G : multiset (submodule ℝ V × submodule ℝ V)}
+(h : semicritical_spaces (F.map prod.snd + G.map prod_sum))
+(hmax : ∀ H, H ≥ F → H ≤ F + G →
+  semicritical_spaces (H.map prod.snd + (F + G - H).map prod_sum) →
+  H = F) :
+semicritical_spaces (F.map prod.snd + G.map prod.fst) :=
+begin
+  revert F,
+  induction G using pauls_multiset_induction,
+  {
+    simp only [multiset.map_zero, add_zero, ge_iff_le],
+    intros F h hmax,
+    exact h,
+  },
+  {
+    intros F h hmax,
+    have : F.map prod.snd + G_C'.map prod_sum ≤ F.map prod.snd + (G_a ::ₘ G_C').map prod_sum,
+    {
+      simp only [multiset.map_cons, multiset.add_cons],
+      exact multiset.le_cons_self _ _,
+    },
+    have ih := G_ᾰ (semicritical_of_le this h) begin
+      intros H leH Hle sc,
+      refine hmax H leH _ _,
+      {
+        rw [multiset.add_cons],
+        exact le_trans Hle (multiset.le_cons_self _ _),
+      },
+      {
+        admit,
+      }
+    end,
+    intros D hD,
+    rcases multiset_split_le hD with ⟨D₁, D₂, hD₁, hD₂, rfl⟩,
+    rcases multiset_exists_of_le_map hD₁ with ⟨pD₁, hpD₁, rfl⟩,
+    rcases multiset_exists_of_le_map hD₂ with ⟨pD₂, hpD₂, rfl⟩,
+    by_cases hD' : G_a ∈ pD₂,
+    {
+      rcases multiset.exists_cons_of_mem hD' with ⟨pD₂, rfl⟩,
+      simp only [multiset.card_add, multiset.card_map, multiset.card_cons],
+      rw [multiset.map_cons, multiset.add_cons, multiset.sum_cons],
+      rw [multiset.cons_le_cons_iff] at hpD₂,
+      by_contra hc,
+      replace hc := lt_of_not_ge hc,
+      simp only [nat.lt_succ_iff, nat.add_succ, add_zero] at hc,
+      have : G_a.fst + (pD₁.map prod.snd + pD₂.map prod.fst).sum = (pD₁.map prod.snd + pD₂.map prod.fst).sum,
+      {
+        symmetry,
+        refine finite_dimensional.eq_of_le_of_finrank_le _ _,
+        {
+          simp only [submodule.add_eq_sup, sup_le_iff],
+          exact le_sup_right,
+        },
+        {
+          rw [dim_finrank] at hc,
+          refine le_trans hc _,
+          rw [←multiset.card_add],
+          admit,
+        },
+      },
+      admit,
+    },
+    admit,
+  },
+end
+
+lemma semicritical_shrinking
+{F G : multiset (submodule ℝ V × submodule ℝ V)}
+{pr : submodule ℝ V × submodule ℝ V}
+(hGF : G ≤ F)
+(hsec : semicritical_spaces ((pr ::ₘ F).map prod_sum))
+(hsuc : minimally_subcritical_spaces ((pr ::ₘ G).map prod_sum))
+(hne : pr.snd ≠ ⊥) :
+semicritical_spaces (pr.snd ::ₘ F.map prod_sum) :=
+sorry
 
 lemma semicritical_switching
 (C : multiset (submodule ℝ V × submodule ℝ V))
 (E : submodule ℝ V)
+(nontriv : C.card > 0)
 (C1sc : semicritical_spaces (C.map prod.fst))
 (hE : dim E = C.card)
 (hCE : multiset_all (λ x : submodule ℝ V × submodule ℝ V, x.fst ≤ E ∧ x.snd ≤ E) C)
@@ -266,18 +220,319 @@ lemma semicritical_switching
 ∃ A B : multiset (submodule ℝ V × submodule ℝ V), A ≤ B ∧ B ≤ C ∧
 semicritical_spaces ((B.map prod.snd) + ((C - B).map prod.fst)) ∧
 dim (A.map prod.snd).sum = A.card ∧
-A.card > 0 := sorry
+A.card > 0 :=
+begin
+  let p : multiset (submodule ℝ V × submodule ℝ V) → Prop :=
+    λ D, semicritical_spaces (D.map prod.snd + (C - D).map prod_sum),
+  have hp : p ⊥,
+  {
+    simp only [p, multiset.bot_eq_zero],
+    rw [multiset.map_zero, zero_add, multiset.sub_zero],
+    intros τ hτ,
+    exact (semicritical_mono C1sc) τ hτ,
+  },
+  rcases ex_maximal_multiset (bot_le : ⊥ ≤ C) hp with ⟨F, hFC, pF, Fmax⟩,
+  rw [multiset.le_iff_exists_add] at hFC,
+  rcases hFC with ⟨F', rfl⟩,
+  let mF : multiset (submodule ℝ V × submodule ℝ V) :=
+    F.map (λ x, ⟨x.snd, x.snd⟩),
+  let q : multiset (submodule ℝ V × submodule ℝ V) → Prop :=
+    λ D, subcritical_spaces (D.map prod_sum),
+  have hq : q (mF + F'),
+  {
+    refine ⟨(mF + F').map prod_sum, _, le_refl _, _⟩,
+    {
+      simpa only [←multiset.card_pos, multiset.card_add, multiset.card_map] using nontriv,
+    },
+    {
+      have : ((mF + F').map prod_sum).sum ≤ E,
+      {
+        apply sum_multiset_le _,
+        intros W hW,
+        simp only [multiset.mem_map, multiset.mem_add] at hW,
+        rcases hW with ⟨W, (⟨a, ha, rfl⟩ | hW), rfl⟩,
+        {
+          simp only [prod_sum, submodule.add_eq_sup, sup_idem],
+          have := hCE a (multiset.subset_of_le (multiset.le_add_right _ _) ha),
+          exact this.2,
+        },
+        {
+          simp only [prod_sum, submodule.add_eq_sup, sup_le_iff],
+          exact hCE W (multiset.subset_of_le (multiset.le_add_left _ _) hW),
+        },
+      },
+      rw [dim_finrank] at hE ⊢,
+      refine le_trans (submodule.finrank_mono this) _,
+      simp only [mF, multiset.card_map, multiset.card_add, hE],
+    },
+  },
+  rcases ex_minimal_multiset (le_refl (mF + F')) hq with ⟨G, hGC, qG, Gmin⟩,
+  rcases multiset_split_le hGC with ⟨mG₁, G₂, hmG₁, hG₂, rfl⟩,
+  rcases multiset_exists_of_le_map hmG₁ with ⟨G₁, hG₁, hG₁e⟩,
+  rw [multiset.le_iff_exists_add] at hG₂,
+  -- rcases hG₁ with ⟨G₁', rfl⟩,
+  rcases hG₂ with ⟨G₂', rfl⟩,
+  -- let mG₁' : multiset (submodule ℝ V × submodule ℝ V) :=
+  --   G₁'.map (λ x, ⟨x.snd, x.snd⟩),
+  have G₂0 : G₂ = 0,
+  {
+    by_contra hc,
+    rcases multiset.exists_mem_of_ne_zero hc with ⟨pr, hpr⟩,
+    rcases multiset.exists_cons_of_mem hpr with ⟨rG₂, rfl⟩,
+    have := semicritical_shrinking
+      (_ : mG₁ + rG₂ ≤ mF + (rG₂ + G₂'))
+      _
+      _
+      (_ : pr.snd ≠ ⊥),
+    {
+      simp only [mF] at this,
+      rw [multiset.map_add, multiset.map_map,
+        map_lambda] at this,
+      simp only [function.comp_app, prod_sum,
+        submodule.add_eq_sup, sup_idem,
+        ←multiset.cons_add] at this,
+      rw [←multiset.map_cons] at this,
+      simp only [←submodule.add_eq_sup] at this,
+      replace Fmax := Fmax (pr ::ₘ F) (multiset.le_cons_self _ _),
+      simp only [p,multiset.cons_add, multiset.add_cons] at Fmax,
+      replace Fmax := Fmax (multiset.cons_le_cons _ (multiset.le_add_right _ _)),
+      simp only [cons_erase_cons, add_tsub_cancel_left] at Fmax,
+      replace Fmax := Fmax this,
+      replace Fmax := congr_arg multiset.card Fmax,
+      simp only [multiset.card_cons] at Fmax,
+      linarith,
+    },
+    {
+      refine add_le_add _ _,
+      {
+        exact hmG₁,
+      },
+      {
+        exact multiset.le_add_right _ _,
+      },
+    },
+    {
+      simp only [p] at pF,
+      simp only [add_tsub_cancel_left] at pF,
+      rw [←multiset.add_cons, ←multiset.cons_add],
+      rw [multiset.map_add],
+      simp only [mF, multiset.map_map],
+      rw [map_lambda],
+      simp only [function.comp_app, prod_sum,
+        submodule.add_eq_sup, sup_idem],
+      simp only [←submodule.add_eq_sup],
+      exact pF,
+    },
+    {
+      simp only [q, multiset.add_cons] at qG Gmin,
+      refine ⟨qG, _⟩,
+      intros D hD,
+      rcases multiset_exists_of_le_map hD.1 with ⟨D', hD', rfl⟩,
+      replace Gmin := Gmin D' hD' hD.2,
+      rw [Gmin],
+    },
+    {
+      apply hne _,
+      simp only [multiset.add_cons, multiset.cons_add],
+      exact multiset.mem_cons_self _ _,
+    },
+  },
+  cases G₂0,
+  refine ⟨G₁, F, hG₁, multiset.le_add_right _ _, _, _, _⟩,
+  {
+    simp only [multiset.quot_mk_to_coe'', multiset.coe_nil_eq_zero, zero_add, add_tsub_cancel_left], -- somehow use maximality of F
+    refine semicritical_additivity _ _,
+    {
+      simp only [p] at pF,
+      simp only [add_tsub_cancel_left, multiset.quot_mk_to_coe'', multiset.coe_nil_eq_zero, zero_add] at pF,
+      exact pF,
+    },
+    {
+      intros H h1 h2 h3,
+      simp only [p, multiset.quot_mk_to_coe'', multiset.coe_nil_eq_zero, zero_add] at Fmax,
+      symmetry,
+      exact Fmax H h1 h2 h3,
+    },
+  },
+  {
+    apply le_antisymm,
+    {
+      have : minimally_subcritical_spaces (G₁.map prod.snd),
+      {
+        refine ⟨_, _⟩,
+        {
+          simp only [q, add_zero, multiset.quot_mk_to_coe'', multiset.coe_nil_eq_zero] at qG,
+          simp only [←hG₁e, multiset.map_map] at qG,
+          rw [map_lambda] at qG,
+          simp only [function.comp_app, prod_sum, submodule.add_eq_sup, sup_idem] at qG,
+          exact qG,
+        },
+        {
+          simp only [multiset.quot_mk_to_coe'', multiset.coe_nil_eq_zero, add_zero] at Gmin,
+          rintro D ⟨hD₁, hD₂⟩,
+          rcases multiset_exists_of_le_map hD₁ with ⟨D, hD, rfl⟩,
+          let mD : multiset( submodule ℝ V × submodule ℝ V) := D.map (λ pr, ⟨pr.snd, pr.snd⟩),
+          simp only [←hG₁e] at Gmin,
+          have := Gmin mD (multiset.map_mono _ hD) _,
+          {
+            replace this := congr_arg (multiset.map prod.snd) this,
+            simp only [multiset.map_map, function.comp_app] at this,
+            symmetry,
+            exact this,
+          },
+          {
+            simp only [q, multiset.quot_mk_to_coe'', multiset.coe_nil_eq_zero, add_zero],
+            simp only [multiset.map_map, function.comp_app, prod_sum, submodule.add_eq_sup, sup_idem],
+            exact hD₂,
+          },
+        },
+      },
+      rcases this.1 with ⟨Gsuc, h1, h2, h3⟩,
+      have : Gsuc = G₁.map prod.snd,
+      {
+        refine this.2 Gsuc ⟨h2, Gsuc, h1, le_refl _, h3⟩,
+      },
+      rw [this, multiset.card_map] at h3,
+      exact h3,
+    },
+    {
+      simp only [p, add_tsub_cancel_left] at pF,
+      simp only [add_tsub_cancel_left] at pF,
+      have := semicritical_of_le (multiset.le_add_right _ _) pF,
+      replace := semicritical_of_le (multiset.map_mono _ hG₁) this,
+      simpa only [multiset.card_map] using this (G₁.map prod.snd) (le_refl _),
+    },
+  },
+  {
+    simp only [q] at qG,
+    have := subcritical_collection_nonempty qG,
+    simpa only [←hG₁e, multiset.map_add, multiset.card_add,
+      multiset.card_map] using this,
+  },
+end
 
-lemma semicritical_of_le
-{C D : multiset (submodule ℝ V)}
-(h : C ≤ D)
-(hsc : semicritical_spaces D) :
-semicritical_spaces C := sorry
+lemma proj_def (E : submodule ℝ V) :
+proj E = (orthogonal_projection E).to_linear_map := rfl
 
+lemma multiset_sum_project_space_commute
+(C : multiset (submodule ℝ V)) (E : submodule ℝ V) :
+C.sum.map (proj E) = (C.map (submodule.map (proj E))).sum :=
+begin
+  induction C using pauls_multiset_induction with C c ih,
+  {
+    simp only [multiset.sum_zero, submodule.zero_eq_bot, submodule.map_bot, multiset.map_zero],
+  },
+  {
+    simp only [multiset.sum_cons, submodule.add_eq_sup,
+      submodule.map_sup, multiset.map_cons],
+    congr,
+    exact ih,
+  }
+end
 
 lemma semicritical_spaces_factorization
 (C D : multiset (submodule ℝ V))
 {E : submodule ℝ V}
 (hC : dim E = C.card ∧ multiset_all (λ W, W ≤ E) C)
 (hCD : semicritical_spaces (C + D)) :
-semicritical_spaces (D.map (λ W, W.map (proj Eᗮ))) := sorry
+semicritical_spaces (D.map (λ W, W.map (proj Eᗮ))) :=
+begin
+  intros τ' hτ',
+  rcases multiset_exists_of_le_map hτ' with ⟨τ, hτ, rfl⟩,
+  rcases multiset.le_iff_exists_add.mp hτ with ⟨π, rfl⟩,
+  let κ := C + τ,
+  have hκ : κ ≤ C + (τ + π),
+  {
+    rw [←add_assoc],
+    simp only [κ],
+    apply multiset.le_add_right,
+  },
+  have dimκ : dim κ.sum ≥ C.card + τ.card,
+  {
+    simp only [←multiset.card_add],
+    exact hCD _ hκ,
+  },
+  have κ_def : κ = C + τ := rfl,
+  have rn := subspace_rank_nullity (orthogonal_projection Eᗮ).to_linear_map κ.sum,
+  rw [←proj_def, ←dim_finrank] at rn,
+  rw [←rn, ker_of_complementary_orthogonal_projection E] at dimκ,
+  rw [κ_def, multiset.sum_add, submodule.add_eq_sup, submodule.map_sup,
+    dim_finrank] at dimκ,
+  have h₁ : C.sum.map (proj Eᗮ) = ⊥,
+  {
+    apply le_bot_iff.mp,
+    intros x hx,
+    rw [submodule.mem_map] at hx,
+    rcases hx with ⟨px, hpx, rfl⟩,
+    replace hpx := sum_multiset_le hC.2 hpx,
+    rw [←ker_of_complementary_orthogonal_projection E] at hpx,
+    exact hpx,
+  },
+  have h₂ : dim (@has_inf.inf (submodule ℝ V) _ E (C.sum ⊔ τ.sum)) ≤ C.card,
+  {
+    rw [←hC.1],
+    apply submodule.finrank_mono,
+    exact inf_le_left,
+  },
+  rw [h₁] at dimκ,
+  replace dimκ := le_trans dimκ (add_le_add_left h₂ _),
+  rw [bot_sup_eq] at dimκ,
+  nth_rewrite 1 [add_comm] at dimκ,
+  zify at dimκ,
+  simp only [add_le_add_iff_left, nat.cast_le] at dimκ,
+  rw [multiset_sum_project_space_commute] at dimκ,
+  rw [multiset.card_map] at ⊢,
+  exact dimκ,
+end
+
+lemma semicritical_spaces_factorization'
+(C D : multiset (submodule ℝ V))
+{E : submodule ℝ V}
+(hC : dim E = C.card ∧ multiset_all (λ W, W ≤ E) C)
+(Csc : semicritical_spaces C)
+(Dsc : semicritical_spaces (D.map (λ W, W.map (proj Eᗮ)))) :
+semicritical_spaces (C + D) :=
+begin
+  intros τ hτ,
+  rcases multiset_split_le hτ with ⟨G, H, hGC, hHD, rfl⟩,
+  have : dim G.sum + dim (H.map (λ W : submodule ℝ V, W.map (proj Eᗮ))).sum
+    ≤ dim (G + H).sum,
+  {
+    have rn := subspace_rank_nullity (proj Eᗮ) (G + H).sum,
+    rw [multiset.sum_add, submodule.add_eq_sup, submodule.map_sup] at rn,
+    have h₀ : G.sum ≤ E,
+    {
+      apply sum_multiset_le,
+      intros W hW,
+      exact hC.2 W (multiset.subset_of_le hGC hW),
+    },
+    have h₁ : G.sum.map (proj Eᗮ) = ⊥,
+    {
+      apply le_bot_iff.mp,
+      intros x hx,
+      rw [submodule.mem_map] at hx,
+      rcases hx with ⟨px, hpx, rfl⟩,
+      replace hpx := h₀ hpx,
+      rw [←ker_of_complementary_orthogonal_projection E] at hpx,
+      exact hpx,
+    },
+    rw [h₁, bot_sup_eq, ker_of_complementary_orthogonal_projection E] at rn,
+    rw [multiset.sum_add, submodule.add_eq_sup, dim_finrank, ←rn],
+    nth_rewrite 1 [add_comm],
+    rw [multiset_sum_project_space_commute, add_le_add_iff_right],
+    apply submodule.finrank_mono,
+    exact le_inf h₀ le_sup_left,
+  },
+  refine le_trans _ this,
+  rw [multiset.card_add],
+  refine add_le_add _ _,
+  {
+    apply Csc _ hGC,
+  },
+  {
+    have := Dsc (H.map (λ W, W.map (proj Eᗮ)))
+      (multiset.map_le_map hHD),
+    rw [multiset.card_map] at this,
+    exact this,
+  },
+end

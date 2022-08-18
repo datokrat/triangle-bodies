@@ -1,5 +1,5 @@
 import multiset convex data.fintype.basic linear_algebra.dimension
-  set_pi measure_theory.measure.measure_space_def
+  set_pi arithmetic measure_theory.measure.measure_space_def
   data.multiset
   linear_algebra.finite_dimensional
   analysis.inner_product_space.projection
@@ -19,7 +19,22 @@ noncomputable def vector_orth (u : V) : submodule ℝ V :=
 (submodule.span ℝ ({u} : set V))ᗮ
 
 lemma mem_vector_orth {u : V} {x : V} :
-x ∈ vector_orth u ↔ ⟪x, u⟫_ℝ = 0 := sorry
+x ∈ vector_orth u ↔ ⟪x, u⟫_ℝ = 0 :=
+begin
+  simp only [vector_orth, submodule.mem_orthogonal, submodule.mem_span_singleton],
+  split,
+  {
+    intro h,
+    rw [real_inner_comm],
+    refine h u _,
+    exact ⟨1, one_smul _ _⟩,
+  },
+  {
+    rintro h u ⟨a, rfl⟩,
+    simp only [inner_smul_left, is_R_or_C.conj_to_real, mul_eq_zero],
+    right, rw [real_inner_comm], exact h,
+  }
+end
 
 noncomputable abbreviation dim := finite_dimensional.finrank ℝ
 abbreviation diff (A : set V) := A -ᵥ A
@@ -767,7 +782,7 @@ begin
   rw [←rn],
   refine add_le_add (le_refl _) _,
   assumption,
-  admit,
+  apply_instance,
 end
 
 noncomputable def project_subspace (E F : submodule ℝ V) : submodule ℝ E :=
@@ -865,4 +880,85 @@ begin
     apply submodule.injective_subtype,
   end,
   apply linear_map.finrank_le_finrank_of_injective f_inj,
+end
+
+
+
+/- lemma vector_span_ball {x : V} {ε : ℝ} (εpos : ε > 0) :
+vector_span ℝ (metric.ball x ε) = ⊤ := sorry -/
+
+lemma span_top_of_ball_subset {A : set V} {x : V} {ε : ℝ} (εpos : ε > 0)
+(h : metric.ball x ε ⊆ A) : submodule.span ℝ A = ⊤ :=
+begin
+  simp only [←top_le_iff],
+  rintro v -,
+  by_cases he : v = x,
+  {
+    rw [he],
+    apply submodule.subset_span,
+    apply h,
+    apply metric.mem_ball_self εpos,
+  },
+  let w := (ε / (2 * ∥v - x∥)) • (v - x) + x,
+  have hz := he ∘ norm_sub_eq_zero_iff.mp,
+  have hpos := norm_sub_pos_iff.mpr he,
+  have hw : w ∈ submodule.span ℝ A,
+  {
+    simp only [w],
+    apply submodule.subset_span,
+    apply h,
+    simp only [metric.mem_ball, dist_eq_norm],
+    simp only [one_div, mul_inv_rev, add_sub_cancel, norm_smul],
+    simp only [real.norm_eq_abs, abs_div, abs_mul, abs_two, abs_norm_eq_norm],
+    simp only [abs_eq_self.mpr (le_of_lt εpos), div_mul_eq_div_div],
+    simp only [div_mul],
+    rw [div_self hz, div_one],
+    exact half_lt_self εpos,
+  },
+  have hx : x ∈ submodule.span ℝ A,
+  {
+    apply submodule.subset_span,
+    apply h,
+    apply metric.mem_ball_self εpos,
+  },
+  have hvw : v = (2 * ∥v - x∥ / ε) • (w - x) + x,
+  {
+    simp only [w, add_sub_cancel, smul_smul],
+    rw [div_mul_div_cancel _ (ne_of_gt εpos)],
+    rw [div_self (double_ne_zero hz)],
+    simp only [one_smul, sub_add_cancel],
+  },
+  rw [hvw],
+  refine submodule.add_mem _ _ _,
+  {
+    refine submodule.smul_mem _ _ _,
+    refine submodule.sub_mem _ _ _,
+    all_goals {assumption},
+  },
+  {assumption},
+end
+
+lemma vector_span_top_of_ball_subset {A : set V} {x : V} {ε : ℝ} (εpos : ε > 0)
+(h : metric.ball x ε ⊆ A) : vector_span ℝ A = ⊤ :=
+begin
+  simp only [vector_span],
+  suffices hh : metric.ball 0 ε ⊆ diff A,
+  {
+    exact span_top_of_ball_subset εpos hh,
+  },
+  intros y hy,
+  simp only [metric.mem_ball] at hy,
+  refine ⟨x + y, x, _, _, _⟩,
+  {
+    apply h,
+    simp only [metric.mem_ball, dist_self_add_left],
+    simpa only [dist_eq_norm, sub_zero] using hy,
+  },
+  {
+    apply h,
+    exact metric.mem_ball_self εpos,
+  },
+  {
+    simp only [vsub_eq_sub, add_sub_cancel'],
+  },
 end

@@ -343,85 +343,6 @@ begin
   },
 end
 
-/- lemma vector_span_ball {x : V} {ε : ℝ} (εpos : ε > 0) :
-vector_span ℝ (metric.ball x ε) = ⊤ := sorry -/
-
-lemma span_top_of_ball_subset {A : set V} {x : V} {ε : ℝ} (εpos : ε > 0)
-(h : metric.ball x ε ⊆ A) : submodule.span ℝ A = ⊤ :=
-begin
-  simp only [←top_le_iff],
-  rintro v -,
-  by_cases he : v = x,
-  {
-    rw [he],
-    apply submodule.subset_span,
-    apply h,
-    apply metric.mem_ball_self εpos,
-  },
-  let w := (ε / (2 * ∥v - x∥)) • (v - x) + x,
-  have hz := he ∘ norm_sub_eq_zero_iff.mp,
-  have hpos := norm_sub_pos_iff.mpr he,
-  have hw : w ∈ submodule.span ℝ A,
-  {
-    simp only [w],
-    apply submodule.subset_span,
-    apply h,
-    simp only [metric.mem_ball, dist_eq_norm],
-    simp only [one_div, mul_inv_rev, add_sub_cancel, norm_smul],
-    simp only [real.norm_eq_abs, abs_div, abs_mul, abs_two, abs_norm_eq_norm],
-    simp only [abs_eq_self.mpr (le_of_lt εpos), div_mul_eq_div_div],
-    simp only [div_mul],
-    rw [div_self hz, div_one],
-    exact half_lt_self εpos,
-  },
-  have hx : x ∈ submodule.span ℝ A,
-  {
-    apply submodule.subset_span,
-    apply h,
-    apply metric.mem_ball_self εpos,
-  },
-  have hvw : v = (2 * ∥v - x∥ / ε) • (w - x) + x,
-  {
-    simp only [w, add_sub_cancel, smul_smul],
-    rw [div_mul_div_cancel _ (ne_of_gt εpos)],
-    rw [div_self (double_ne_zero hz)],
-    simp only [one_smul, sub_add_cancel],
-  },
-  rw [hvw],
-  refine submodule.add_mem _ _ _,
-  {
-    refine submodule.smul_mem _ _ _,
-    refine submodule.sub_mem _ _ _,
-    all_goals {assumption},
-  },
-  {assumption},
-end
-
-lemma vector_span_top_of_ball_subset {A : set V} {x : V} {ε : ℝ} (εpos : ε > 0)
-(h : metric.ball x ε ⊆ A) : vector_span ℝ A = ⊤ :=
-begin
-  simp only [vector_span],
-  suffices hh : metric.ball 0 ε ⊆ diff A,
-  {
-    exact span_top_of_ball_subset εpos hh,
-  },
-  intros y hy,
-  simp only [metric.mem_ball] at hy,
-  refine ⟨x + y, x, _, _, _⟩,
-  {
-    apply h,
-    simp only [metric.mem_ball, dist_self_add_left],
-    simpa only [dist_eq_norm, sub_zero] using hy,
-  },
-  {
-    apply h,
-    exact metric.mem_ball_self εpos,
-  },
-  {
-    simp only [vsub_eq_sub, add_sub_cancel'],
-  },
-end
-
 /- lemma lemma_vspan_subset_span {A : set V} :
 (vector_span ℝ A : set V) ⊆ submodule.span ℝ A :=
 begin
@@ -744,30 +665,6 @@ end default_reduction
 variables {V : Type}
 [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
-lemma sum_multiset_le
-{C : multiset (submodule ℝ V)}
-{E : submodule ℝ V}
-(h : multiset_all (λ W, W ≤ E) C) :
-C.sum ≤ E :=
-begin
-  induction C using multiset.induction,
-  {simp only [multiset.sum_zero, submodule.zero_eq_bot, bot_le]},
-  {
-    simp only [multiset.sum_cons, submodule.add_eq_sup, sup_le_iff],
-    split,
-    {
-      refine h C_a _,
-      simp only [multiset.mem_cons_self],
-    },
-    {
-      refine C_ᾰ _,
-      intros W hW,
-      refine h W _,
-      simp only [hW, multiset.mem_cons, or_true],
-    },
-  },
-end
-
 lemma le_sum_multiset_of_mem
 {C : multiset (submodule ℝ V)}
 {E : submodule ℝ V}
@@ -837,11 +734,6 @@ begin
   },
 end
 
-lemma map_lambda
-{α β : Type}
-(f : α → β) (C : multiset α) :
-C.map f = C.map (λ x, f x) := rfl
-
 lemma semicritical_subprojection
 {k : ℕ}
 {u : metric.sphere (0 : V) 1}
@@ -899,15 +791,24 @@ begin
   unfreezingI {
     induction n₀ with n₀ ih generalizing n μs V,
     {
-      have : μs = ∅,
+      have : μs = 0,
       {
-        rw [multiset.empty_eq_zero, ←multiset.card_eq_zero, hdim3],
+        rw [←multiset.card_eq_zero, hdim3],
         simpa only [le_zero_iff] using hn,
       },
       rw [this],
       simp only [multiset.empty_eq_zero, multiset.map_zero, bm.area_empty],
     },
     {
+      by_cases hn' : n = 0,
+      {
+        have : μs = 0,
+        {
+          rw [←multiset.card_eq_zero, hdim3, hn'],
+        },
+        rw [this],
+        simp only [multiset.map_zero, bm.area_empty],
+      },
       rcases exists_pair_multiset μs u hTS with
         ⟨C, rfl⟩,
       let D := C.map pair_to_space_pair,
@@ -915,7 +816,12 @@ begin
       have :=
       begin
         clear ih,
-        refine semicritical_switching D uperp _ _ _ _,
+        refine semicritical_switching D uperp _ _ _ _ _,
+        {
+          simp only [D, multiset.card_map] at hdim3 ⊢,
+          rw [hdim3],
+          exact nat.pos_of_ne_zero hn',
+        },
         {
           simpa only [multiset.map_map] using hTS,
         },

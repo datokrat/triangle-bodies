@@ -1,12 +1,9 @@
-import measure_theory.measure.finite_measure_weak_convergence
-  algebra.category.FinVect
+import linalg
   analysis.inner_product_space.basic
   analysis.convex.basic
   topology.basic
   topology.subset_properties
   topology.metric_space.basic
-  analysis.convex.cone
-  order.complete_lattice
   linear_algebra.affine_space.affine_subspace
   data.set.basic
   data.set.pointwise
@@ -55,7 +52,7 @@ begin
   simp only [normal_face, set.mem_set_of],
 end
 
-def normal_face_subset {K : set V} {u : V} :
+lemma normal_face_subset {K : set V} {u : V} :
 normal_face K u ⊆ K :=
 begin
   rintro x hx,
@@ -239,6 +236,13 @@ def faces (A : set V) := { F : set V | is_face A F }
 def faces_containing {A B : set V} (h : B ⊆ A) :=
 { F : set V | is_face A F ∧ B ⊆ F }
 
+lemma face_subset' {A : set V} (F : faces A) :
+↑F ⊆ A :=
+begin
+  apply face_subset,
+  exact F.property,
+end
+
 def smallest_face_containing {A B : set V}
 (Acv : convex ℝ A) (BA : B ⊆ A) : faces A :=
 ⟨
@@ -304,3 +308,48 @@ begin
   rw this,
 
 end -/
+
+lemma mem_vspan_normal_face (A : set V) (u : V) :
+u ∈ (vector_span ℝ (normal_face A u))ᗮ :=
+begin
+  simp only [vector_span, mem_orthogonal_span],
+  rintro - ⟨a, b, ha, hb, rfl⟩,
+  simp only [mem_normal_face] at ha hb,
+  simp only [vsub_eq_sub, inner_sub_left, sub_eq_zero],
+  apply le_antisymm,
+  all_goals {tauto},
+end
+
+/- lemma add_mem_normal_face (A : set V) (u : V) {x y : V}
+(hx : x ∈ normal_face A u) (hy : y ∈ (vector_span ℝ (normal_face A u))ᗮ)
+(hxy : x + y ∈ A) : x + y ∈ normal_face A u := sorry
+
+lemma add_mem_normal_face' (A : set V) (u : V) :
+A ∩ (normal_face A u + (vector_span ℝ (normal_face A u))ᗮ) = normal_face A u := sorry -/
+
+lemma inner_eq_of_mem_normal_face {A : set V} {u x y : V}
+(hx : x ∈ normal_face A u) (hy : y ∈ normal_face A u) :
+⟪x, u⟫_ℝ = ⟪y, u⟫_ℝ := sorry
+
+lemma is_face_refl {A : set V} (hA : convex ℝ A) :
+is_face A A :=
+begin
+  suffices h : A = normal_face A 0,
+  {
+    nth_rewrite 1 [h],
+    apply normal_face_is_face hA,
+  },
+  simp only [normal_face],
+  ext, split,
+  {
+    intro xA,
+    refine ⟨xA, _⟩,
+    simp only [inner_zero_right],
+    rintro - -,
+    exact le_refl 0,
+  },
+  {
+    rintro ⟨xA, -⟩,
+    exact xA,
+  },
+end

@@ -1,4 +1,4 @@
-import multiset convex data.fintype.basic linear_algebra.dimension
+import multiset data.fintype.basic linear_algebra.dimension
   set_pi arithmetic measure_theory.measure.measure_space_def
   data.multiset
   linear_algebra.finite_dimensional
@@ -369,31 +369,8 @@ end
 def semicritical (C : multiset (set V)) :=
   ∀ τ : multiset (set V), τ ≤ C → common_dimension τ ≥ τ.card
 
-/- axiom mixed_volume {k : ℕ} {ι : Type} [fintype ι]
-  (hcard : fintype.card ι = k)
-  (C : ι → convex_body V)
-  (hdim : common_dimension (subtype.val ∘ C) ≤ k) : ℝ
-
-axiom mixed_area [measurable_space V] [borel_space V] {k : ℕ} {ι : Type} [fintype ι]
-  (hcard : fintype.card ι = k)
-  (C : ι → convex_body V)
-  (hdim : common_dimension (subtype.val ∘ C) ≤ k + 1) : measure_theory.measure (metric.sphere (0 : V) 1)
-
-axiom mixed_volume_nonneg {k : ℕ} {ι : Type} [fintype ι]
-  (hcard : fintype.card ι = k)
-  (C : ι → convex_body V)
-  (hdim : common_dimension (subtype.val ∘ C) ≤ k) : mixed_volume hcard C hdim ≥ 0
-
-axiom mixed_area_nonneg {k : ℕ} {ι : Type} [fintype ι]
-  (hcard : fintype.card ι = k)
-  (C : ι → convex_body V)
-  (hdim : common_dimension (subtype.val ∘ C) ≤ k + 1) : ??? -/
-
 instance pauls_completeness_foo (E : submodule ℝ V) : complete_space E := sorry
 
-
-/- def project_set (E : submodule ℝ V) (A : set V) : set E :=
-orthogonal_projection E '' A -/
 def project_set (E : submodule ℝ V): set V → set E :=
 λ A, orthogonal_projection E '' A
 
@@ -960,5 +937,120 @@ begin
   },
   {
     simp only [vsub_eq_sub, add_sub_cancel'],
+  },
+end
+
+lemma le_orthogonal_symm (E F : submodule ℝ V) :
+E ≤ Fᗮ ↔ F ≤ Eᗮ :=
+begin
+  suffices h : ∀ E F : submodule ℝ V, E ≤ Fᗮ → F ≤ Eᗮ,
+  {
+    split,
+    all_goals {exact h _ _},
+  },
+  clear E F,
+  intros E F h,
+  rw [←submodule.orthogonal_orthogonal F],
+  apply submodule.orthogonal_le,
+  exact h,
+end
+
+lemma inner_orthogonal_eq_inner (E : submodule ℝ V)
+(u : E) (x : V) : ⟪((proj E) x : V), (u : V)⟫_ℝ = ⟪x, u⟫_ℝ :=
+begin
+  symmetry,
+  apply eq_of_sub_eq_zero,
+  -- simp only [submodule.coe_inner],
+  rw [←inner_sub_left],
+  simp only [proj, continuous_linear_map.to_linear_map_eq_coe, continuous_linear_map.coe_coe, orthogonal_projection_inner_eq_zero,
+  submodule.coe_mem],
+end
+
+lemma map_proj_orthogonal (E F : submodule ℝ V) :
+Fᗮ.map (proj E) = (F.comap E.subtype)ᗮ :=
+begin
+  rw [←submodule.orthogonal_orthogonal (Fᗮ.map (proj E))],
+  refine congr_arg submodule.orthogonal _,
+  ext,
+  simp only [submodule.mem_map, submodule.mem_comap, submodule.mem_orthogonal, submodule.coe_subtype, submodule.coe_inner],
+  simp only [forall_exists_index, and_imp, forall_apply_eq_imp_iff₂],
+  split,
+  {
+    intros h,
+    have : x.val ∈ Fᗮᗮ,
+    {
+      simp only [submodule.mem_orthogonal],
+      intros u hu,
+      have := h u hu,
+      simpa only [inner_orthogonal_eq_inner] using this,
+    },
+    {
+      simpa only [submodule.orthogonal_orthogonal] using this,
+    },
+  },
+  {
+    intros xF v hv,
+    simp only [real_inner_comm] at hv,
+    simpa only [inner_orthogonal_eq_inner] using hv x xF,
+  },
+end
+
+lemma mem_orthogonal_span (A : set V) (x : V) :
+x ∈ (submodule.span ℝ A)ᗮ ↔ ∀ u : V, u ∈ A → ⟪u, x⟫_ℝ = 0 :=
+begin
+  split,
+  {
+    rw [submodule.mem_orthogonal],
+    intros hx u hu,
+    refine hx u _,
+    apply submodule.subset_span,
+    exact hu,
+  },
+  {
+    intro h,
+    rw [submodule.mem_orthogonal],
+    intros u hu,
+    apply submodule.span_induction hu,
+    {
+      exact h,
+    },
+    {
+      simp only [inner_zero_left],
+    },
+    {
+      intros y z hy hz,
+      simp only [inner_add_left, hy, hz, add_zero],
+    },
+    {
+      intros a y hy,
+      simp only [inner_smul_left, hy, mul_zero],
+    },
+  },
+end
+
+lemma singleton_add_space_eq {E : submodule ℝ V} {x : V}
+(xE : x ∈ E) :
+({x} : set V) + ↑E = ↑E :=
+begin
+  ext y, split,
+  {
+    rintro ⟨xx, e, hxx, eE, rfl⟩,
+    rcases (set.eq_of_mem_singleton hxx).symm with rfl,
+    exact E.add_mem xE eE,
+  },
+  {
+    intros yE,
+    exact ⟨x, y - x, set.mem_singleton _,
+      E.sub_mem yE xE, add_sub_cancel'_right _ _⟩,
+  },
+end
+
+lemma eq_orthogonal_symm (E F : submodule ℝ V) :
+E = Fᗮ ↔ F = Eᗮ :=
+begin
+  split,
+  all_goals {
+    intro h,
+    rw [h, submodule.orthogonal_orthogonal],
   },
 end

@@ -1,4 +1,4 @@
-import touching_cone convex
+import convex
   data.real.ereal
 
 variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
@@ -54,9 +54,9 @@ noncomputable def finite_support_function {A : set V}
 (h : is_convex_body A) : V → ℝ :=
 λ u, supr (λ a : A, ⟪a.1, u⟫_ℝ)
 
-lemma support_function_finite {A : set V}
+/- lemma support_function_finite {A : set V}
 (Abd : is_convex_body A) (u : V) :
-support_function A u = (finite_support_function Abd u : ereal) := sorry
+support_function A u = (finite_support_function Abd u : ereal) := sorry -/
 
 def pos_homogeneous (f : V → ℝ) :=
 ∀ v : V, ∀ a : ℝ, a ≥ 0 → f (a • v) = a * (f v)

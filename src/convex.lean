@@ -353,3 +353,8 @@ begin
     exact xA,
   },
 end
+
+/- lemma eq_inter_halfspaces_of_closed_convex
+{A : set V} (Acv : convex ℝ A) (Acl : is_closed A) :
+∃ S : set (V × ℝ), A = ⋂ pr ∈ S, { x : V | ⟪x, prod.fst pr⟫_ℝ ≤ pr.2 } :=
+sorry -/

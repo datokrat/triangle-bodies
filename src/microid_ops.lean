@@ -1042,13 +1042,16 @@ lemma gen_lfe_norm {k : ℕ}
 (G : microid_generator_space V k) :
 lfe ⊤ (polytope_of_microid_generator G) (polytope_of_microid_generator (norm_generator G)) :=
 begin
+  apply lfe_symm,
   unfold lfe,
   rintro u -,
   rcases polytope_of_norm_generator_smul G with ⟨c, hc₁, hc₂⟩,
   simp only [hc₂],
-  rw [normal_face_homothety _ hc₁],
-  rw [vector_span_homothety _ hc₁],
-  apply_instance, -- why????
+  refine ⟨c • (-G.val 0), c, hc₁, _⟩,
+  --simp only [face_smul hc₁, face_translate],
+  rw [normal_face_homothety _ hc₁, smul_add],
+  nth_rewrite 0 [add_comm],
+  simp only [set.smul_set_singleton],
 end
 
 lemma lim_norm_gen {k : ℕ}

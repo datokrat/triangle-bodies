@@ -17,11 +17,14 @@ def lfe --locally face equivalent
 (U : set (metric.sphere (0 : V) 1))
 (P Q : polytope V) :=
 ∀ u : metric.sphere (0 : V) 1,
-u ∈ U → vector_span ℝ (normal_face P.val u) = vector_span ℝ (normal_face Q.val u)
+u ∈ U →
+∃ (x : V) (c : ℝ), c > 0 ∧ normal_face P.val u = {x} + c • (normal_face Q.val u)
 
 lemma lfe_refl (P : polytope V) : lfe ⊤ P P :=
 begin
-  tauto,
+  intros u uU,
+  refine ⟨0, 1, zero_lt_one, _⟩,
+  simp only [one_smul, set.singleton_add, zero_add, set.image_id'],
 end
 
 lemma lfe_symm
@@ -30,8 +33,16 @@ lemma lfe_symm
 (h : lfe U P Q) : lfe U Q P :=
 begin
   intros v hv,
-  symmetry,
-  exact h v hv,
+  rcases h v hv with ⟨x, c, cpos, hxc⟩,
+  rw [hxc],
+  refine ⟨-c⁻¹ • x, c⁻¹, inv_pos_of_pos cpos, _⟩,
+  rw [smul_add, ←add_assoc],
+  simp only [neg_smul, set.smul_set_singleton,
+  set.singleton_add_singleton, add_left_neg,
+  set.singleton_add],
+  simp only [subtype.val_eq_coe, set.image_add_left, neg_neg, set.preimage_add_left_singleton, add_left_neg, set.singleton_add,
+  zero_add, set.image_id'],
+  rw [inv_smul_smul₀ (ne_of_gt cpos)],
 end
 
 lemma lfe_trans
@@ -42,7 +53,17 @@ lemma lfe_trans
 begin
   intros v hv,
   simp only [set.mem_inter_eq] at hv,
-  simp only [h₁ v hv.1, h₂ v hv.2],
+  rcases h₁ v hv.1 with ⟨x₁, c₁, c₁pos, hxc₁⟩,
+  rcases h₂ v hv.2 with ⟨x₂, c₂, c₂pos, hxc₂⟩,
+  rw [hxc₁, hxc₂],
+  refine ⟨x₁ + c₁ • x₂, c₁ * c₂, _, _⟩,
+  {
+    exact mul_pos c₁pos c₂pos,
+  },
+  {
+    simp only [smul_add, smul_smul, ←add_assoc],
+    simp only [set.smul_set_singleton, set.singleton_add_singleton],
+  },
 end
 
 lemma lfe_mono

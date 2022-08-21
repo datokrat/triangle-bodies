@@ -762,7 +762,9 @@ begin
   {
     intros H hH,
     intros w hw,
-    refine congr_arg _ _,
+    refine ⟨0, 1, zero_lt_one, _⟩,
+    rw [one_smul],
+    simp only [subtype.val_eq_coe, set.singleton_add, zero_add, set.image_id'],
     symmetry,
     refine face_chop_eq_of_generator_face _ _,
     rintro l hl,

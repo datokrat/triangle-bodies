@@ -865,3 +865,55 @@ begin
     exact xA,
   },
 end
+
+lemma face_smul {A : set V} {u : V} {c : ℝ} (cpos : c > 0) :
+normal_face (c • A) u = c • normal_face A u :=
+begin
+  ext,
+  simp only [mem_normal_face, set.mem_smul_set],
+  simp only [ge_iff_le, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂],
+  split,
+  {
+    rintro ⟨⟨y, yA, rfl⟩, h⟩,
+    refine ⟨y, ⟨yA, _⟩, _⟩,
+    {
+      intros z zA,
+      replace h := h z zA,
+      simp only [inner_smul_left, is_R_or_C.conj_to_real] at h,
+      exact le_of_mul_le_mul_left h cpos,
+    },
+    {
+      refl,
+    }
+  },
+  {
+    rintro ⟨y, ⟨yA, hy⟩, rfl⟩,
+    refine ⟨⟨y, yA, rfl⟩, _⟩,
+    intros a aA,
+    simp only [inner_smul_left, is_R_or_C.conj_to_real],
+    rw [mul_le_mul_left cpos],
+    tauto,
+  },
+end
+
+lemma face_translate {A : set V} {u x : V} :
+normal_face (A + {x}) u = normal_face A u + {x} :=
+begin
+  ext y,
+  simp only [mem_normal_face, set.mem_add, set.mem_singleton_iff],
+  split,
+  {
+    rintro ⟨⟨z, w, zA, rfl, rfl⟩, h₂⟩,
+    refine ⟨z, w, ⟨zA, _⟩, rfl, rfl⟩,
+    intros v vA,
+    have := h₂ (v + w) ⟨v, w, vA, rfl, rfl⟩,
+    simpa only [inner_add_left, ge_iff_le, add_le_add_iff_right] using this,
+  },
+  {
+    rintro ⟨z, w, ⟨zA, h⟩, rfl, rfl⟩,
+    refine ⟨⟨z, w, zA, rfl, rfl⟩, _⟩,
+    rintro v ⟨s, t, sA, rfl, rfl⟩,
+    simp only [inner_add_left, ge_iff_le, add_le_add_iff_right],
+    exact h s sA,
+  },
+end

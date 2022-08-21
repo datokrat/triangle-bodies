@@ -1,4 +1,4 @@
-import convex linalg
+import convex face linalg
   linear_algebra.affine_space.affine_subspace
   analysis.normed_space.hahn_banach.separation
   analysis.inner_product_space.dual
@@ -230,18 +230,6 @@ nonempty_of_convex_body
 
 noncomputable def convex_body.supp (K : convex_body V) (u : V) : ℝ :=
 Sup (flip inner u '' K.val)
-
--- MOVETO linalg.lean
-lemma inner_left_continuous (u : V) :
-continuous (flip inner u : V → ℝ) :=
-begin
-  let f : V → V × V := λ v, (v, u),
-  let g : V × V → ℝ := λ x, ⟪x.fst, x.snd⟫_ℝ,
-  let h := g ∘ f,
-  have gc : continuous g := continuous_inner,
-  have hc : continuous h := by continuity,
-  exact hc,
-end
 
 lemma convex_body.exists_inner_eq_supp (K : convex_body V) (u : V) :
 ∃ x : V, x ∈ K.val ∧ ⟪x, u⟫_ℝ = K.supp u :=

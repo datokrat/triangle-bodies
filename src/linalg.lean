@@ -3,6 +3,7 @@ import multiset data.fintype.basic linear_algebra.dimension
   data.multiset
   linear_algebra.finite_dimensional
   analysis.inner_product_space.projection
+  analysis.inner_product_space.dual
   data.multiset.basic
   data.nat.basic
 
@@ -1053,4 +1054,24 @@ begin
     intro h,
     rw [h, submodule.orthogonal_orthogonal],
   },
+end
+
+lemma inner_left_continuous (u : V) :
+continuous (flip inner u : V → ℝ) :=
+begin
+  let f : V → V × V := λ v, (v, u),
+  let g : V × V → ℝ := λ x, ⟪x.fst, x.snd⟫_ℝ,
+  let h := g ∘ f,
+  have gc : continuous g := continuous_inner,
+  have hc : continuous h := by continuity,
+  exact hc,
+end
+
+lemma inner_product_space.to_dual_symm_apply'
+{x : V} {y : normed_space.dual ℝ V} :
+⟪x, (inner_product_space.to_dual ℝ V).symm y⟫_ℝ =
+y x :=
+begin
+  rw [real_inner_comm],
+  exact inner_product_space.to_dual_symm_apply,
 end

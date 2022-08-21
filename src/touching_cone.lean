@@ -59,7 +59,7 @@ F = touching_cone A u :=
 begin
   intros hf hu,
   apply surrounding_relint_face_unique,
-  {simp only [set.singleton_nonempty]},
+  --{simp only [set.singleton_nonempty]},
   {assumption},
   {simp only [hu, set.singleton_subset_iff]},
 end

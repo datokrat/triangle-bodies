@@ -1,9 +1,28 @@
 import convex linalg
+  analysis.normed_space.hahn_banach.separation
 
 open_locale pointwise
 
 variables {V : Type} [inner_product_space ℝ V]
 [finite_dimensional ℝ V]
+
+
+def relint (A : set V) : set V :=
+coe '' interior ((coe : affine_span ℝ A → V) ⁻¹' A)
+
+def relbd (A : set V) : set V :=
+(closure A) \ (relint A)
+
+def is_relopen (A : set V) : Prop :=
+is_open ((coe : affine_span ℝ A → V) ⁻¹' A)
+
+theorem open_in_subspace (E : affine_subspace ℝ V) (A : set V) (h : is_open A) : is_open ((coe : E → V) ⁻¹' A) :=
+begin
+  let c := (coe : E → V),
+  have : c = (coe : E → V) := rfl,
+  let cc : continuous (coe : E → V) := continuous_subtype_coe,
+  refine is_open.preimage cc h,
+end
 
 lemma relint_subset_self (A : set V) :
 relint A ⊆ A :=
@@ -103,6 +122,25 @@ begin
         exact metric.mem_ball_self εpos,
       },
     },
+  },
+end
+
+lemma mem_relint' (A : set V) (u : V) :
+u ∈ relint A ↔ u ∈ span_points ℝ A ∧ ∃ (t : set V), t ∩ span_points ℝ A ⊆ A ∧ is_open t ∧ u ∈ t :=
+begin
+  rw [mem_relint], split,
+  {
+    rintro ⟨hu, ε, εpos, εball⟩,
+    refine ⟨hu, metric.ball u ε, εball, metric.is_open_ball, metric.mem_ball_self εpos⟩,
+  },
+  {
+    rintro ⟨hu, t, tsub, topen, tmem⟩,
+    rw [metric.is_open_iff] at topen,
+    rcases topen _ tmem with ⟨ε, εpos, εball⟩,
+    refine ⟨hu, ε, εpos, _⟩,
+    refine subset_trans _ tsub,
+    apply set.inter_subset_inter_left,
+    exact εball,
   },
 end
 
@@ -671,3 +709,83 @@ begin
     },
   },
 end
+
+lemma relint_eq_int {A : set V} (hA : vector_span ℝ A = ⊤) :
+relint A = interior A :=
+begin
+  cases A.eq_empty_or_nonempty with hs hs,
+  {
+    rw [hs],
+    simp only [relint, set.preimage_empty, interior_empty, set.image_empty],
+  },
+  {
+    rw [←affine_subspace.affine_span_eq_top_iff_vector_span_eq_top_of_nonempty] at hA,
+    replace hA := congr_arg (coe : affine_subspace ℝ V → set V) hA,
+    rw [coe_affine_span, affine_subspace.top_coe] at hA,
+    {
+      ext,
+      rw [mem_relint', mem_interior, hA],
+      simp only [set.mem_univ, set.inter_univ, true_and, exists_prop],
+    },
+    {
+      exact hs,
+    },
+  },
+end
+
+lemma aspan_preimage_coe_le' {W : submodule ℝ V} (A : set V) :
+span_points ℝ ((coe : W → V) ⁻¹' A) ⊆ coe ⁻¹' span_points ℝ A :=
+begin
+  have : coe ⁻¹' span_points ℝ A = (affine_subspace.comap W.subtype.to_affine_map (affine_span ℝ A) : set W) := rfl,
+  rw [this, ←coe_affine_span, ←affine_subspace.le_def, affine_span_le],
+  simp only [affine_subspace.coe_comap, linear_map.coe_to_affine_map, submodule.coe_subtype, coe_affine_span],
+  exact set.preimage_mono (by apply subset_affine_span),
+end
+
+lemma relint_inter_flat {A : set V} {E : submodule ℝ V}
+{x : V} (xA : x ∈ relint A) (xE : x ∈ E) :
+(⟨x, xE⟩ : E) ∈ relint ((coe : E → V) ⁻¹' A) :=
+begin
+  have xA' := relint_subset_self A xA,
+  simp only [mem_relint'] at xA ⊢,
+  refine ⟨_, _⟩,
+  {
+    apply subset_affine_span,
+    exact xA',
+  },
+  {
+    rcases xA.2 with ⟨t, tsub, topen, tmem⟩,
+    refine ⟨coe ⁻¹' t, _, _, _⟩,
+    {
+      refine subset_trans _ (set.preimage_mono tsub),
+      rintro y ⟨hy₁, hy₂⟩,
+      simp only [set.mem_inter_eq, set.mem_preimage, ←coe_affine_span] at hy₁ ⊢,
+      exact ⟨hy₁, aspan_preimage_coe_le' _ hy₂⟩,
+    },
+    {
+      exact open_in_subspace E.to_affine_subspace _ topen,
+    },
+    {
+      exact tmem,
+    },
+  },
+end
+
+lemma relint_relopen {A : set V} (hA : is_relopen A) :
+relint A = A := sorry
+
+lemma interior_convex {A : set V} (Acv : convex ℝ A) :
+convex ℝ (interior A) := sorry
+
+/- lemma relint_convex {A : set V} (Acv : convex ℝ A) :
+convex ℝ (relint A) := sorry -/
+
+lemma cl_relint_eq_cl {A : set V} (Acv : convex ℝ A) :
+closure (relint A) = closure A := sorry
+
+lemma relint_nonempty {A : set V} (Acv : convex ℝ A)
+(Ane : A.nonempty) : (relint A).nonempty := sorry
+
+lemma exists_mem_open_segment_of_mem_relint {A : set V} {x y : V}
+(xA : x ∈ relint A) (yA : y ∈ affine_span ℝ A) :
+∃ z : V, z ∈ A ∧ x ∈ open_segment ℝ y z := sorry

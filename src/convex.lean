@@ -8,8 +8,10 @@ import linalg
   data.set.basic
   data.set.pointwise
   topology.basic
+  analysis.inner_product_space.dual
 
 open_locale pointwise
+open_locale topological_space
 
 variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
@@ -107,254 +109,172 @@ begin
   assumption,
 end
 
-lemma polytope_face_normal {A F : set V} (h : is_polytope A) :
-is_face A F → ∃ u : V, F = normal_face A u := sorry
-
-lemma normal_face_is_face {A : set V} (h : convex ℝ A) :
-∀ u : V, is_face A (normal_face A u) := sorry
-
-lemma set_own_face {A : set V} (Acv : convex ℝ A) : is_face A A :=
-begin
-  simp only [is_face],
-  refine ⟨_, _, _⟩,
-  {tauto},
-  {assumption},
-  {
-    rintro x hx y hy ⟨z, ⟨hzs, hz⟩⟩ p hp,
-    refine convex.segment_subset Acv hx hy hp,
-  }
-end
-
-lemma normal_face_spanned_by_verts {S : set V} (u : V) :
-normal_face (convex_hull ℝ S) u = convex_hull ℝ (normal_face S u) := sorry
-
---lemma face_body {A : set V} (u : V) (h : is_convex_body A) : is_convex_body (face A u) := sorry
-lemma face_polytope {A F : set V} (h : is_polytope A) (hf : is_face A F) : is_polytope F := sorry
-
-lemma face_closed {A F : set V} (h : is_closed A) (hf : is_face A F) :
-is_closed F := sorry
-
-def relint (A : set V) : set V :=
-coe '' interior ((coe : affine_span ℝ A → V) ⁻¹' A)
-
-def relbd (A : set V) : set V :=
-(closure A) \ (relint A)
-
-def is_relopen (A : set V) : Prop :=
-is_open ((coe : affine_span ℝ A → V) ⁻¹' A)
-
-theorem open_in_subspace (E : affine_subspace ℝ V) (A : set V) (h : is_open A) : is_open ((coe : E → V) ⁻¹' A) :=
-begin
-  let c := (coe : E → V),
-  have : c = (coe : E → V) := rfl,
-  let cc : continuous (coe : E → V) := continuous_subtype_coe,
-  refine is_open.preimage cc h,
-end
-
--- lemma relopen_iff_open {A : set V} (hA : vector_span ℝ A = ⊤) :
--- is_relopen A ↔ is_open A := sorry
-
-lemma relint_eq_int {A : set V} (hA : vector_span ℝ A = ⊤) :
-relint A = interior A := sorry
-
-/- theorem cl_relint {A : set V} (h : convex ℝ A) :
-is_closed A → closure (relint A) = A := sorry
-
-theorem relint_cl {A : set V} (h : convex ℝ A) :
-is_relopen A → relint (closure A) = A := sorry
-
-theorem relint_affine_span {A : set V} (h : convex ℝ A) :
-affine_span ℝ (relint A) = affine_span ℝ A := sorry
-
-lemma relopen_of_inter_relopen {A B : set V} :
-is_relopen A → is_relopen B → is_relopen (A ∩ B) := sorry
-
-lemma relint_eq_relint_inter_relint {A B : set V}
-(Acv : convex ℝ A) (BCv: convex ℝ B):
-(relint A ∩ relint B).nonempty →
-relint (A ∩ B) = relint A ∩ relint B := sorry -/
-
-/- lemma relopen_subspace (E : submodule ℝ V) :
-is_relopen (E : set V) := sorry
-
-lemma relint_coe_invariant {E : submodule ℝ V}
-(A : set E) : E.subtype '' (relint A) = relint (E.subtype '' A) := sorry
- -/
-lemma relint_inter_flat {A : set V} {E : submodule ℝ V}
-{x : V} (xA : x ∈ relint A) (xE : x ∈ E) :
-(⟨x, xE⟩ : E) ∈ relint ((coe : E → V) ⁻¹' A) := sorry
-
-
-lemma face_inter {A F G : set V} (h : convex ℝ A)
-(hF : is_face A F) (hG : is_face A G) :
-is_face A (F ∩ G) :=
-begin
-  simp only [is_face],
-  refine ⟨_, _, _⟩,
-  {
-    rintro x ⟨xF, -⟩,
-    exact (face_subset hF) xF,
-  },
-  {
-    exact convex.inter (face_convex hF) (face_convex hG),
-  },
-  {
-    have aF := face_absorbs_segments hF,
-    have aG := face_absorbs_segments hG,
-    rintro x hx y hy ⟨z, ⟨hzs, hz⟩⟩ p hp,
-    exact ⟨
-      aF x hx y hy ⟨z, ⟨hzs, hz.1⟩⟩ hp, -- why omit p?
-      aG x hx y hy ⟨z, ⟨hzs, hz.2⟩⟩ hp,
-    ⟩,
-  },
-end
-
-lemma face_sInter {A : set V} {M : set (set V)}
-(Acv : convex ℝ A) (h : ∀ F ∈ M, is_face A F)
-(ne : M.nonempty) :
-is_face A (set.sInter M) :=
-begin
-  rcases ne with ⟨F, hF⟩,
-  simp only [is_face],
-  refine ⟨_, _, _⟩,
-  {
-    rintro x hx,
-    exact (face_subset (h F hF)) (hx F hF),
-  },
-  {
-    exact convex_sInter (λ G hG, face_convex (h G hG)),
-  },
-  {
-    rintro x hx y hy ⟨z, ⟨hzs, hz⟩⟩ p hp,
-    rintro G hG,
-    exact face_absorbs_segments (h G hG) x hx y hy ⟨z, ⟨hzs, hz G hG⟩⟩ hp,
-  },
-end
-
-def faces (A : set V) := { F : set V | is_face A F }
-
-def faces_containing {A B : set V} (h : B ⊆ A) :=
-{ F : set V | is_face A F ∧ B ⊆ F }
-
-lemma face_subset' {A : set V} (F : faces A) :
-↑F ⊆ A :=
-begin
-  apply face_subset,
-  exact F.property,
-end
-
-def smallest_face_containing {A B : set V}
-(Acv : convex ℝ A) (BA : B ⊆ A) : faces A :=
-⟨
-  set.sInter (faces_containing BA),
-  face_sInter Acv (λ G hG, hG.1) ⟨A, ⟨set_own_face Acv, BA⟩⟩
-⟩
-
-lemma smallest_face_containing_contains {A B : set V}
-(Acv : convex ℝ A) (BA : B ⊆ A) :
-B ⊆ smallest_face_containing Acv BA := sorry
-
-def smallest_face_containing_point {A : set V}
-(Acv : convex ℝ A) {x : V} (xA : x ∈ A) : faces A :=
-smallest_face_containing Acv (set.singleton_subset_iff.mpr xA)
-
-lemma point_in_proper_face_of_relbd {A : set V}
-(Acv : convex ℝ A) {x : V} (hx : x ∈ relbd A ∩ A) :
-(smallest_face_containing_point Acv hx.2 : set V) ⊂ A := sorry
-
-lemma relopen_set_in_relint_face {A B : set V}
-(Acv : convex ℝ A) (BA : B ⊆ A)
-(Bro : is_relopen B) (Bcv : convex ℝ B) (Bne : B.nonempty):
-B ⊆ relint (smallest_face_containing Acv BA) :=
-begin
-  let F := smallest_face_containing Acv BA,
-  by_contradiction,
-  admit,
-end
-
-lemma relint_faces_disjoint {A F G : set V}
-(Acv : convex ℝ A) (hF : is_face A F) (hG : is_face A G) :
-F = G ∨ relint F ∩ relint G = 0 := sorry
-
-lemma surrounding_relint_face_unique {A B F : set V}
-(Acv : convex ℝ A) (BA : B ⊆ A) (Bne : B.nonempty) (h : is_face A F) :
-B ⊆ relint F → F = smallest_face_containing Acv BA := sorry
-
-lemma relopen_singleton (x : V) : is_relopen ({x} : set V) := sorry
-
-lemma point_in_relint_face {A : set V}
-(Acv : convex ℝ A) {x : V} (xA : x ∈ A) :
-x ∈ relint (smallest_face_containing_point Acv xA : set V) :=
-begin
-  have := relopen_set_in_relint_face Acv
-    (set.singleton_subset_iff.mpr xA)
-    (relopen_singleton x)
-    (convex_singleton x)
-    ⟨x, rfl⟩,
-  exact set.singleton_subset_iff.mp this,
-end
-
-lemma convex_hull_subset_vector_space (A : set V) (E : submodule ℝ V) :
-A ⊆ E → convex_hull ℝ A ⊆ E := sorry
-
-
-/- theorem relint_aff_int (A : set V) : is_relopen (relint A) :=
-begin
-  have hh: relint A = coerce_affine_subspace_set (affine_span ℝ A) (interior (set_into_affine_subspace A (affine_span ℝ A))) := sorry,
-  have : set_into_affine_subspace (relint A) (affine_span ℝ A) = (interior (set_into_affine_subspace A (affine_span ℝ A))) := sorry,
-  rw is_relopen,
-  -- rw relint,
-  simp,
-  rw this,
-
-end -/
-
-lemma mem_vspan_normal_face (A : set V) (u : V) :
-u ∈ (vector_span ℝ (normal_face A u))ᗮ :=
-begin
-  simp only [vector_span, mem_orthogonal_span],
-  rintro - ⟨a, b, ha, hb, rfl⟩,
-  simp only [mem_normal_face] at ha hb,
-  simp only [vsub_eq_sub, inner_sub_left, sub_eq_zero],
-  apply le_antisymm,
-  all_goals {tauto},
-end
-
-/- lemma add_mem_normal_face (A : set V) (u : V) {x y : V}
-(hx : x ∈ normal_face A u) (hy : y ∈ (vector_span ℝ (normal_face A u))ᗮ)
-(hxy : x + y ∈ A) : x + y ∈ normal_face A u := sorry
-
-lemma add_mem_normal_face' (A : set V) (u : V) :
-A ∩ (normal_face A u + (vector_span ℝ (normal_face A u))ᗮ) = normal_face A u := sorry -/
-
-lemma inner_eq_of_mem_normal_face {A : set V} {u x y : V}
-(hx : x ∈ normal_face A u) (hy : y ∈ normal_face A u) :
-⟪x, u⟫_ℝ = ⟪y, u⟫_ℝ := sorry
-
-lemma is_face_refl {A : set V} (hA : convex ℝ A) :
-is_face A A :=
-begin
-  suffices h : A = normal_face A 0,
-  {
-    nth_rewrite 1 [h],
-    apply normal_face_is_face hA,
-  },
-  simp only [normal_face],
-  ext, split,
-  {
-    intro xA,
-    refine ⟨xA, _⟩,
-    simp only [inner_zero_right],
-    rintro - -,
-    exact le_refl 0,
-  },
-  {
-    rintro ⟨xA, -⟩,
-    exact xA,
-  },
-end
+-- wrong for empty face
+/- lemma polytope_face_normal {A F : set V} (h : is_polytope A) :
+is_face A F → ∃ u : V, F = normal_face A u := sorry -/
 
 /- lemma eq_inter_halfspaces_of_closed_convex
 {A : set V} (Acv : convex ℝ A) (Acl : is_closed A) :
 ∃ S : set (V × ℝ), A = ⋂ pr ∈ S, { x : V | ⟪x, prod.fst pr⟫_ℝ ≤ pr.2 } :=
 sorry -/
+
+/- lemma closedify {A : set V} {u : V} :
+∃ ε : ℝ, ε > 0 ∧ metric.ball u ε ⊆ A ↔ ∃ ε : ℝ, ε > 0 ∧ metric.closed_ball u ε ⊆ A :=
+begin
+  admit,
+end -/
+
+lemma closedify {A : set V} {u : V} :
+(∃ (ε : ℝ) (εpos : ε > 0), metric.ball u ε ⊆ A) → ∃ (ε : ℝ) (εpos : ε > 0), metric.closed_ball u ε ⊆ A :=
+begin
+  rintro ⟨ε, εpos, εball⟩,
+  refine ⟨ε / 2, half_pos εpos, _⟩,
+  exact subset_trans (metric.closed_ball_subset_ball (half_lt_self εpos)) εball,
+end
+
+noncomputable def std_osegment_to_osegment (v w : V) :
+open_segment ℝ (0 : ℝ) 1 → open_segment ℝ v w :=
+begin
+  intro s,
+  refine ⟨(1 - s.val) • v + s.val • w, _⟩,
+  rcases s with ⟨sval, sprop⟩,
+  rw [open_segment_eq_Ioo (zero_lt_one : (0 : ℝ) < 1), set.mem_Ioo] at sprop,
+  simp only,
+  refine ⟨1 - sval, sval, _, _, _, rfl⟩,
+  {
+    simp only [sub_pos, sprop.2],
+  },
+  {
+    exact sprop.1,
+  },
+  {
+    simp only [sub_add_cancel],
+  },
+end
+
+lemma mem_open_segment' {x y z : V} :
+z ∈ open_segment ℝ x y ↔ ∃ c : ℝ, c ∈ set.Ioo (0 : ℝ) 1 ∧
+z = c • x + (1 - c) • y :=
+begin
+  rw [open_segment, set.mem_set_of],
+  split,
+  {
+    rintro ⟨a, b, ha, hb, hab, rfl⟩,
+    refine ⟨a, _, _⟩,
+    {
+      rw [set.mem_Ioo],
+      refine ⟨ha, _⟩,
+      linarith,
+    },
+    {
+      rw [←hab, add_tsub_cancel_left],
+    },
+  },
+  {
+    rintro ⟨c, hc, rfl⟩,
+    rw [set.mem_Ioo] at hc,
+    refine ⟨c, 1 - c, _, _, _, rfl⟩,
+    {
+      exact hc.1,
+    },
+    {
+      simp only [sub_pos, hc.2],
+    },
+    {
+      simp only [add_sub_cancel'_right],
+    },
+  },
+end
+
+lemma segments_closable_of_closed {A : set V}
+(h : is_closed A) :
+∀ x y : V, open_segment ℝ x y ⊆ A → segment ℝ x y ⊆ A :=
+begin
+  --rw [←is_open_compl_iff] at h,
+  intros x y hseg,
+  intros z hz,
+  rcases hz with ⟨a, b, ha, hb, hab, rfl⟩,
+  by_cases hc : a = 0 ∨ b = 0,
+  {
+    cases hc with hc hc,
+    {
+      rcases hc with rfl,
+      rw [zero_add] at hab,
+      rcases hab with rfl,
+      rw [zero_smul, zero_add, one_smul],
+      let f : ℝ → V := λ t, t • x + (1 - t) • y,
+      have fc : continuous f := by continuity,
+      have : filter.tendsto f (𝓝[set.Ioo 0 1] 0) (𝓝 y),
+      {
+        convert fc.continuous_within_at,
+        simp only [f],
+        simp only [zero_smul, sub_zero, zero_add, one_smul],
+      },
+      haveI : (𝓝[set.Ioo (0 : ℝ) 1] 0).ne_bot := left_nhds_within_Ioo_ne_bot zero_lt_one,
+      refine is_closed.mem_of_tendsto h this _,
+      refine filter.eventually.mp
+        eventually_mem_nhds_within
+        (filter.eventually_of_forall _),
+      intros z hz,
+      apply hseg,
+      simp only [mem_open_segment', f],
+      exact ⟨z, hz, rfl⟩,
+    },
+    {
+      rcases hc with rfl,
+      rw [add_zero] at hab,
+      rcases hab with rfl,
+      rw [zero_smul, add_zero, one_smul],
+      let f : ℝ → V := λ t, t • x + (1 - t) • y,
+      have fc : continuous f := by continuity,
+      have : filter.tendsto f (𝓝[set.Ioo 0 1] 1) (𝓝 x),
+      {
+        convert fc.continuous_within_at,
+        simp only [f],
+        simp only [one_smul, sub_self, add_zero, zero_smul],
+      },
+      haveI : (𝓝[set.Ioo (0 : ℝ) 1] 1).ne_bot := right_nhds_within_Ioo_ne_bot zero_lt_one,
+      refine is_closed.mem_of_tendsto h this _,
+      refine filter.eventually.mp
+        eventually_mem_nhds_within
+        (filter.eventually_of_forall _),
+      intros z hz,
+      apply hseg,
+      simp only [mem_open_segment', f],
+      exact ⟨z, hz, rfl⟩,
+    },
+  },
+  {
+    push_neg at hc,
+    replace ha := lt_of_le_of_ne ha (hc.1 ∘ eq.symm),
+    replace hb := lt_of_le_of_ne hb (hc.2 ∘ eq.symm),
+    apply hseg,
+    simp only [open_segment],
+    refine ⟨a, b, ha, hb, hab, rfl⟩,
+  },
+end
+
+lemma closed_iff_segments_closable {A : set V}
+(Acv : convex ℝ A):
+is_closed A ↔ ∀ x y : V, open_segment ℝ x y ⊆ A → segment ℝ x y ⊆ A :=
+begin
+  split,
+  {
+    exact segments_closable_of_closed,
+  },
+  {
+    intro h,
+    admit,
+  },
+end
+
+lemma open_segment_nonempty (x y : V) :
+(open_segment ℝ x y).nonempty :=
+begin
+  let half : ℝ := 1 / 2,
+  refine ⟨half • x + half • y, half, half, _, _, _, rfl⟩,
+  all_goals {simp only [half]},
+  {positivity},
+  {positivity},
+  {ring},
+end

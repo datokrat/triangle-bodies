@@ -7,7 +7,8 @@ open_locale topological_space
 section msupport
 
 variables {α : Type}
-  [measurable_space α] [topological_space α] [borel_space α]
+  [metric_space α] [proper_space α]
+  [measurable_space α] [borel_space α]
 
 def msupport
 (μ : measure_theory.finite_measure α) : set α :=
@@ -15,6 +16,14 @@ def msupport
 
 lemma closed_msupport (μ : measure_theory.finite_measure α) :
 is_closed (msupport μ) := sorry
+
+-- needs second-countability
+lemma integral_eq_of_eq_on_msupport {f g : α → ℝ}
+{μ : measure_theory.finite_measure α}
+(hf : measure_theory.integrable f μ.val)
+(hg : measure_theory.integrable g μ.val)
+(h : ∀ G ∈ msupport μ, f G = g G) :
+∫ G, f G ∂μ.val = ∫ G, g G ∂μ.val := sorry
 
 lemma msupport_subset_of_tendsto
 (μ : ℕ → measure_theory.finite_measure α)

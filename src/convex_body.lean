@@ -321,6 +321,16 @@ begin
   apply K.mem_normal_face_of_inner_eq_supp u xK hx,
 end
 
+lemma convex_body.inner_le_supp (K : convex_body V) {u : V} {x : V}
+(xK : x ∈ K.val) :
+⟪x, u⟫_ℝ ≤ K.supp u :=
+begin
+  obtain ⟨y, yKu, ye⟩ := K.supp_exists_mem_face u,
+  rw [←ye],
+  rw [mem_normal_face] at yKu,
+  exact yKu.2 x xK,
+end
+
 lemma convex_body.subset_of_supp_le (K L : convex_body V) :
 K.supp ≤ L.supp → K.val ⊆ L.val :=
 begin

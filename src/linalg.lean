@@ -779,7 +779,7 @@ begin
     rintro x ⟨d, ⟨a, b, ha, hb, rfl⟩, rfl⟩,
     refine ⟨f a, f b, _⟩,
     refine ⟨⟨a, ⟨ha, rfl⟩⟩, ⟨b, ⟨hb, rfl⟩⟩, _⟩,
-    simp [linear_map.map_sub],
+    simp only [linear_map.map_sub, vsub_eq_sub],
   },
   {
     rintro x ⟨fa, fb, ⟨a, ha, rfl⟩, ⟨b, hb, rfl⟩, rfl⟩,
@@ -1067,6 +1067,17 @@ begin
   exact hc,
 end
 
+lemma inner_right_continuous (u : V) :
+continuous (inner u : V → ℝ) :=
+begin
+  let f : V → V × V := λ v, (u, v),
+  let g : V × V → ℝ := λ x, ⟪x.fst, x.snd⟫_ℝ,
+  let h := g ∘ f,
+  have gc : continuous g := continuous_inner,
+  have hc : continuous h := by continuity,
+  exact hc,
+end
+
 lemma inner_product_space.to_dual_symm_apply'
 {x : V} {y : normed_space.dual ℝ V} :
 ⟪x, (inner_product_space.to_dual ℝ V).symm y⟫_ℝ =
@@ -1075,3 +1086,6 @@ begin
   rw [real_inner_comm],
   exact inner_product_space.to_dual_symm_apply,
 end
+
+noncomputable def of_dual' (f : V →ₗ[ℝ] ℝ) : V :=
+(inner_product_space.to_dual ℝ V).symm ⟨f, sorry⟩

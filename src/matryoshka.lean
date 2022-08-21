@@ -423,7 +423,7 @@ begin
     rw [ll v hv, ll ↑u (metric.mem_ball_self εpos)],
   },
   {
-    apply microid_supp_locally_linear_of_generators,
+    apply microid_supp_locally_linear_of_generators εpos,
     intros G hG,
     apply support_locally_linear_of_cuspy εpos,
     intros tr valid htrG,

@@ -118,13 +118,13 @@ begin
   },
 end
 
-lemma area_eq_of_lfe
+lemma area_pos_iff_of_lfe
 {P Q : polytope V} {U : set (metric.sphere (0 : V) 1)}
 {Ks : multiset (convex_body V)}
 (hPQ : lfe U P Q)
 (hKs : dim V = Ks.card + 2) :
-bm.area (convex_body_of_polytope P ::ₘ Ks) U =
-bm.area (convex_body_of_polytope Q ::ₘ Ks) U :=
+bm.area (convex_body_of_polytope P ::ₘ Ks) U > 0 ↔
+bm.area (convex_body_of_polytope Q ::ₘ Ks) U > 0 :=
 begin
   -- partition into face relints
   -- use that faces are, up to homothety, contained in each other
@@ -175,11 +175,10 @@ begin
       exact is_open_interior,
     },
     replace h₁ := h₁ _ this,
-    refine lt_of_lt_of_eq h₁ _,
-    refine area_eq_of_lfe _ hKs,
-    have hQP := lfe_symm hPQ;
+    simpa only [area_pos_iff_of_lfe _ /- magic!? -/ hKs] using h₁,
+    /- have hQP := lfe_symm hPQ,
     refine lfe_mono (by assumption) _,
-    exact subset_trans (set.inter_subset_right W _) interior_subset,
+    exact subset_trans (set.inter_subset_right W _) interior_subset, -/
   },
 end
 

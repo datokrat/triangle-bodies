@@ -124,6 +124,9 @@ microid_generator_space V k → ℝ :=
 lemma supp_microid_eq_integral {k : ℕ} (μ : microid_measure V k) :
 (microid_of_measure μ).supp = (λ u, ∫ G, (body_of_microid_generator G).supp u ∂μ.val) := sorry
 
+lemma supp_microid_eq_integral' {k : ℕ} (μ : microid_measure V k) :
+(microid_of_measure μ).supp = (λ u, ∫ G in msupport μ, (body_of_microid_generator G).supp u ∂μ.val) := sorry
+
 lemma msupport_microid_eq_closure {k : ℕ}
 (μ : microid_measure V k)
 {C : multiset (convex_body V)}

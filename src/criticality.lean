@@ -6,7 +6,7 @@ import convex linalg multiset data.fintype.basic linear_algebra.dimension
   analysis.inner_product_space.projection
   data.multiset.basic
   data.nat.basic
-  tactic.transport
+  tactic.congr
 
 open_locale pointwise
 
@@ -247,17 +247,93 @@ begin
   simpa only [zero_add] using this,
 end
 
---lemma linear_independent_congr (ι κ : Type)
+noncomputable def span_singleton (x : V) : submodule ℝ V := submodule.span ℝ {x}
 
-def multiset.to_enum_type {α : Type} (C : multiset α) : Type :=
-C.to_enum_finset
+def multiset.linear_independent
+(C : multiset V) : Prop :=
+semicritical_spaces (C.map span_singleton)
 
---set_option pp.implicit true
+def pointed_submodule (V : Type)
+[inner_product_space ℝ V] := Σ E : submodule ℝ V, E
+
+def pointed_submodule.to_vector (M : pointed_submodule V) : V :=
+M.snd.val
+
+def pointed_submodule.to_space (M : pointed_submodule V) : submodule ℝ V :=
+M.fst
+
+def pointed_submodule.mem (M : pointed_submodule V) : M.to_vector ∈ M.to_space :=
+M.snd.property
+
+noncomputable def pointed_submodule.proj_keep_space (E : submodule ℝ V)
+(M : pointed_submodule V) : pointed_submodule E × submodule ℝ V :=
+begin
+  refine ⟨⟨project_subspace E M.fst, _⟩, M.fst⟩,
+  refine ⟨proj E M.snd, _⟩,
+  exact submodule.mem_map_of_mem M.snd.property,
+end
+
+noncomputable def pointed_submodule.proj (E : submodule ℝ V)
+(M : pointed_submodule V) : pointed_submodule E :=
+begin
+  refine ⟨project_subspace E M.fst, proj E M.snd, _⟩,
+  exact submodule.mem_map_of_mem M.snd.property,
+end
+
+lemma multiset.lift_pointed
+{C : multiset (submodule ℝ V)}
+{E : submodule ℝ V}
+{D : multiset (pointed_submodule E)}
+(CD : D.map pointed_submodule.to_space = C.map (project_subspace E)) :
+∃ F : multiset (pointed_submodule V),
+F.map (pointed_submodule.to_space) = C ∧
+F.map (pointed_submodule.proj E) = D :=
+begin
+  obtain ⟨F, hF₁, hF₂, hF₃⟩ := multiset.exists_join CD,
+  obtain ⟨G, hG⟩ := F.exists_elementwise_preimage
+    (pointed_submodule.proj_keep_space E) _, rotate,
+  {
+    intros x xF,
+    have : x.fst.to_vector ∈ project_subspace E x.snd :=
+      hF₃ x xF ▸ x.fst.mem,
+    simp only [project_subspace, submodule.mem_map] at this,
+    obtain ⟨y, yx, hy⟩ := this,
+    refine ⟨⟨x.snd, ⟨y, yx⟩⟩, _⟩,
+    simp only [pointed_submodule.proj_keep_space, proj, hy, submodule.coe_mk],
+    dsimp only,
+    rw [prod.ext_iff, sigma.subtype_ext_iff],
+    simp only [eq_self_iff_true, and_true],
+    split,
+    {rw [←hF₃ _ xF], refl},
+    {refl},
+  },
+  refine ⟨G, _, _⟩,
+  {
+    admit,
+  },
+  {
+    admit,
+  },
+end
+
+lemma ne_bot_of_semicritical_spaces_of_mem
+{C : multiset (submodule ℝ V)}
+{W : submodule ℝ V}
+(Csc : semicritical_spaces C)
+(WC : W ∈ C) : W ≠ ⊥ :=
+begin
+  intro h,
+  rw [←finrank_eq_zero] at h,
+  have := Csc {W} (multiset.singleton_le.mpr WC),
+  rw [multiset.card_singleton, multiset.sum_singleton, ge_iff_le] at this,
+  linarith,
+end
+
 lemma semicritical_iff_linear_independent
-{C : multiset (submodule ℝ V)}:
-semicritical_spaces C ↔ ∃ CC : multiset (Σ E : submodule ℝ V, E),
-CC.map (λ x, x.fst) = C ∧
-linear_independent ℝ (λ x : CC.to_enum_type, x.val.fst.snd.val) :=
+{C : multiset (submodule ℝ V)} :
+semicritical_spaces C ↔ ∃ CC : multiset (pointed_submodule V),
+CC.map pointed_submodule.to_space = C ∧
+(CC.map pointed_submodule.to_vector).linear_independent :=
 begin
   split,
   {
@@ -270,18 +346,13 @@ begin
         rcases hn with rfl,
         simp only [multiset.map_eq_zero, subtype.val_eq_coe, exists_eq_left],
         rintro -,
-        generalize h : (0 : multiset (Σ (E : submodule ℝ V), E)).to_enum_type = S,
-        simp only [multiset.to_enum_type, multiset.zero_to_enum_finset] at h,
-        rw [←h],
-        simp only [linear_independent_iff],
-        intros l hl,
-        ext,
-        cases a.property, -- harder than expected. dependent rewrites don't work
+        simp only [multiset.linear_independent, semicritical_spaces, multiset.map_zero, nonpos_iff_eq_zero, ge_iff_le, forall_eq,
+        multiset.card_zero, zero_le'],
       },
       {
         intro Csc,
         by_cases h : ∃ D, D < C ∧ 0 < D ∧ dim D.sum ≤ D.card,
-        {
+        admit {
           obtain ⟨D, DC, D0, hD⟩ := h,
           have cD : D.card ≤ n,
           {
@@ -302,7 +373,43 @@ begin
           },
           obtain ⟨fE, hfE⟩ := ih hE'C _,
           {
-            
+            obtain ⟨G, hG₁, hG₂⟩ := multiset.lift_pointed hfE.1,
+            refine ⟨fD + G, _, _⟩,
+            {
+              simp only [multiset.map_add, hfD.1, hG₁],
+            },
+            {
+              simp only [multiset.linear_independent] at hfD hfE ⊢,
+              simp only [multiset.map_add],
+              apply semicritical_spaces_factorization',
+              {
+                split,
+                {
+                  simp only [multiset.card_map],
+                  convert multiset.card_map pointed_submodule.to_space fD,
+                  rw [hfD.1],
+                  exact hD,
+                },
+                {
+                  intros W hW,
+                  simp only [multiset.mem_map, span_singleton] at hW,
+                  obtain ⟨-, ⟨x, hx, rfl⟩, rfl⟩ := hW,
+                  simp only [submodule.span_le, set.singleton_subset_iff],
+                  have : x.to_space ∈ D := hfD.1 ▸ multiset.mem_map_of_mem _ hx,
+                  exact le_sum_multiset_of_mem this x.mem,
+                },
+              },
+              {exact hfD.2},
+              {
+                convert hfE.2 using 1,
+                simp only [multiset.map_map, ←hG₂],
+                congr' 1,
+                funext x,
+                simp only [function.comp_app, span_singleton, submodule.map_span],
+                congr' 1,
+                simp only [pointed_submodule.proj, pointed_submodule.to_vector, subtype.val_eq_coe, set.image_singleton],
+              },
+            },
           },
           {
             simp only [E', project_subspace],
@@ -310,6 +417,43 @@ begin
             refine ⟨hD, _⟩,
             intros W hW,
             exact le_sum_multiset_of_mem hW,
+          },
+        },
+        {
+          push_neg at h,
+          cases multiset.empty_or_exists_mem C with hh hh,
+          {
+            obtain rfl := hh,
+            refine ⟨0, multiset.map_zero _, _⟩,
+            {
+              simp only [multiset.map_zero _, multiset.linear_independent],
+              intros G hG,
+              rw [multiset.le_zero] at hG,
+              simp only [hG, multiset.card_zero, ge_iff_le, zero_le'],
+            },
+          },
+          {
+            -- this has to be changed.
+            -- idea: induction over the number of entries with
+            -- dimension greater than one
+            obtain ⟨W, hW⟩ := hh,
+            obtain ⟨T, rfl⟩ := multiset.exists_cons_of_mem hW,
+            have := ne_bot_of_semicritical_spaces_of_mem Csc hW,
+            rw [submodule.ne_bot_iff] at this,
+            obtain ⟨x, xW, xnz⟩ := this,
+            simp only [multiset.card_cons, nat.succ_le_succ_iff] at hn,
+            obtain ⟨CC, hCC⟩ := ih hn _, rotate,
+            {
+              admit,
+            },
+            refine ⟨⟨W, ⟨x, xW⟩⟩ ::ₘ CC, _⟩,
+            split,
+            {
+              admit,
+            },
+            {
+              simp only [multiset.map_cons, multiset.linear_independent],
+            },
           },
         },
       },

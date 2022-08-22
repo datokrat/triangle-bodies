@@ -426,3 +426,69 @@ begin
   rw [←finset.card_eq_zero],
   rw [multiset.card_to_enum_finset, multiset.card_zero],
 end
+
+lemma multiset.exists_elementwise_preimage {α β : Type}
+(C : multiset α) (f : β → α) (h : ∀ a : α, a ∈ C → a ∈ set.range f) :
+∃ D : multiset β, D.map f = C :=
+begin
+  induction C using pauls_multiset_induction with C a ih,
+  {
+    simp only [multiset.map_eq_zero, exists_apply_eq_apply],
+  },
+  {
+    obtain ⟨b, rfl⟩ := h a (multiset.mem_cons_self _ _),
+    obtain ⟨D, hD⟩ := ih _, rotate,
+    {
+      intros a aC,
+      exact h a (multiset.mem_cons_of_mem aC),
+    },
+    refine ⟨b ::ₘ D, _⟩,
+    simpa only [multiset.map_cons, multiset.cons_inj_right] using hD,
+  },
+end
+
+@[simp]
+lemma multiset_all_zero {α : Type} {p : α → Prop} :
+multiset_all p (0 : multiset α) = true :=
+begin
+  simp only [multiset_all, multiset.not_mem_zero, is_empty.forall_iff, implies_true_iff],
+end
+
+@[simp]
+lemma multiset.zero_eq_map {α β : Type} {s : multiset α} {f : α → β} :
+0 = s.map f ↔ s = 0 :=
+begin
+  split,
+  {intro h, replace h := h.symm, simpa only [multiset.map_eq_zero] using h},
+  {intro h, simp only [*, multiset.map_zero]},
+end
+
+lemma multiset.exists_join {α β γ : Type} {f : α → γ} {g : β → γ}
+{C : multiset α} {D : multiset β} (h : C.map f = D.map g) :
+∃ E : multiset (α × β), E.map prod.fst = C ∧ E.map prod.snd = D ∧
+multiset_all (λ x : α × β, f x.fst = g x.snd) E :=
+begin
+  revert D,
+  induction C using pauls_multiset_induction with C a ih,
+  {
+    intros D h,
+    simp only [multiset.map_eq_zero, exists_eq_left, multiset.map_zero],
+    simp only [multiset.map_zero, multiset.zero_eq_map] at h,
+    simp only [h, eq_self_iff_true, true_and, multiset_all_zero],
+  },
+  {
+    intros D h,
+    simp only [multiset.map_cons] at h,
+    have : f a ∈ D.map g := h ▸ multiset.mem_cons_self (f a) (C.map f),
+    rw [multiset.mem_map] at this,
+    obtain ⟨b, bD, hd⟩ := this,
+    obtain ⟨D, rfl⟩ := multiset.exists_cons_of_mem bD,
+    simp only [multiset.map_cons, hd, multiset.cons_inj_right] at h,
+    obtain ⟨E, hE⟩ := ih h,
+    refine ⟨⟨a, b⟩ ::ₘ E, _⟩,
+    simp only [hE, multiset_all, multiset.map_cons, eq_self_iff_true, multiset.mem_cons, prod.forall, prod.mk.inj_iff, true_and],
+    rintro a' b' (⟨rfl, rfl⟩ | h),
+    {exact hd.symm},
+    {simp only [multiset_all, prod.forall] at hE, tauto},
+  },
+end

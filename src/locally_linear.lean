@@ -13,9 +13,26 @@ def supp_locally_linear (U : set V)
 (K : convex_body V) :=
 ∃ x : V, supp_locally_linear_with U K x
 
-structure supp_locally_linear' (U : set V) (K : convex_body V) : Prop :=
-(map_add : ∀ x y, x ∈ U → y ∈ U → x + y ∈ U → K.supp (x + y) = K.supp x + K.supp y)
-(map_smul : ∀ (c : ℝ) x, x ∈ U → c • x ∈ U → K.supp (c • x) = c • K.supp x)
+def finsupp_sum {α : Type} (f : α →₀ ℝ) : ℝ :=
+f.support.sum f.to_fun
+
+noncomputable def finsupp_weighted_sum {α : Type} (w : α →₀ ℝ) (f : α → V) : V :=
+w.support.sum (λ a, w a • f a)
+
+structure supp_locally_linear'' (u : V) (ε : ℝ) (K : convex_body V) : Prop :=
+/- (map_add : ∀ x y z, x ∈ U → y ∈ U → z ∈ U → x + y - z ∈ U → K.supp (x + y - z) = K.supp x + K.supp y - K.supp z)
+(map_smul : ∀ (c : ℝ) x, x ∈ U → c • x ∈ U → K.supp (c • x) = c • K.supp x) -/
+--(map_ll : ∀ (c : ℝ) x y z, x ∈ U → y ∈ U → z ∈ U → x + c • (y - z) ∈ U → K.supp (x + c • (y - z)) = K.supp x + c • (K.supp y - K.supp z))
+(map_smul : ∀ (c δ : ℝ) x, δ • x + u ∈ metric.ball u ε → δ • (c • x) + u ∈ metric.ball u ε → K.supp (δ • (c • x) + u) - K.supp u = c * (K.supp (δ • x + u) - K.supp u))
+(map_add : ∀ (δ : ℝ) x y, δ • x + u ∈ metric.ball u ε → δ • y + u ∈ metric.ball u ε → δ • (x + y) + u ∈ metric.ball u ε → K.supp (δ • (x + y) + u) - K.supp u = (K.supp (δ • x + u) - K.supp u) + (K.supp (δ • y + u) - K.supp u))
+(map_hom : ∀ (δ : ℝ), δ • u ∈ metric.ball u ε → K.supp (δ • u) = δ • K.supp u)
+
+structure supp_locally_linear' {ι : Type} (basis : basis ι ℝ V) (u : V) (ε : ℝ) (K : convex_body V) : Prop :=
+--(ι : Type)
+--(basis : basis ι ℝ V)
+--(basis_mem : ∀ k : ι, basis k ∈ metric.ball u ε)
+(linear : ∀ v : V, v ∈ metric.ball u ε →
+K.supp v = (basis.repr v).sum (λ i ci, ci * K.supp (basis i)))
 
 noncomputable def transform_into_ball (u : V) (ε : ℝ)
 (v : V) : V :=
@@ -51,47 +68,63 @@ noncomputable def ll_extension (u : V) (ε : ℝ)
 (f : V → ℝ) : V → ℝ :=
 λ v, ((2 * ∥v∥) / ε) * (f (transform_into_ball u ε v) - f u)
 
-lemma supp_locally_linear_iff {u : V} {ε : ℝ} (εpos : ε > 0)
+lemma supp_locally_linear_iff {ι : Type} {b : basis ι ℝ V}
+{u : V} {ε : ℝ} (εpos : ε > 0)
+(hb : ∀ k : ι, b k ∈ metric.ball u ε)
 (K : convex_body V) :
 supp_locally_linear (metric.ball u ε) K ↔
-supp_locally_linear' (metric.ball u ε) K :=
+supp_locally_linear' b u ε K :=
 begin
   split,
   {
     rintro ⟨x, h⟩,
-    refine ⟨_, _⟩,
+    refine ⟨_⟩,
     {
-      intros x y hx hy hxy,
-      repeat {rw [h]},
-      {
-        rw [inner_add_right],
-      },
-      all_goals {assumption},
-    },
-    {
-      intros c x hx hcx,
-      repeat {rw [h]},
-      {
-        rw [inner_smul_right, smul_eq_mul],
-      },
-      all_goals {assumption},
+      intros v hv,
+      rw [h v hv],
+      simp only [h (b _) (hb _)],
+      --simp only [←real_inner_smul_right],
+      simp only [←smul_eq_mul],
+      simp only [←finsupp.inner_sum],
+      rw [←finsupp.total_apply],
+      rw [basis.total_repr],
     },
   },
   {
-    rintro ⟨hadd', hsmul'⟩,
-    let f := ll_extension u ε K.supp,
+    rintro ⟨hlin⟩,
+    let f' : (ι →₀ ℝ) → ℝ := λ f, f.sum (λ i ci, ci * K.supp (b i)),
+    let f := f' ∘ b.repr,
     have flin : is_linear_map ℝ f,
     {
       refine ⟨_, _⟩,
       {
         intros x y,
-        simp only [f, ll_extension, transform_into_ball],
-        rw [hadd'],
-      }
+        simp only [f, f', function.comp_app],
+        rw [map_add, finsupp.sum_add_index'],
+        {
+          simp only [zero_mul, eq_self_iff_true, implies_true_iff],
+        },
+        {
+          simp only [add_mul, eq_self_iff_true, forall_forall_const, implies_true_iff],
+        },
+      },
+      {
+        intros d x,
+        simp only [f, f', function.comp_app],
+        rw [map_smul, finsupp.sum_smul_index', finsupp.smul_sum],
+        {simp only [smul_mul_assoc]},
+        {
+          intro i,
+          simp only [zero_mul],
+        },
+      },
     },
     have feq: ∀ v : V, v ∈ metric.ball u ε → f v = K.supp v,
     {
-      admit,
+      intros v hv,
+      symmetry,
+      apply hlin,
+      exact hv,
     },
     obtain ⟨hadd, hsmul⟩ := flin,
     let x := of_dual' ⟨_, hadd, hsmul⟩,
@@ -172,6 +205,12 @@ begin
   },
 end
 
+lemma exists_basis_in_ball {ε : ℝ} (u : V) (εpos : ε > 0) :
+∃ (ι : Type) (b : basis ι ℝ V), ∀ k : ι, b k ∈ metric.ball u ε :=
+begin
+  admit,
+end
+
 lemma microid_supp_locally_linear_of_generators {k : ℕ} {ε : ℝ} {u : V}
 (εpos : ε > 0)
 (μ : microid_measure V k)
@@ -179,32 +218,23 @@ lemma microid_supp_locally_linear_of_generators {k : ℕ} {ε : ℝ} {u : V}
 supp_locally_linear (metric.ball u ε) (body_of_microid_generator G)) :
 supp_locally_linear (metric.ball u ε) (microid_of_measure μ) :=
 begin
-  simp only [supp_locally_linear_iff εpos] at h ⊢,
-  refine ⟨_, _⟩,
+  obtain ⟨ι, b, hb⟩ := exists_basis_in_ball u εpos,
+  simp only [supp_locally_linear_iff εpos hb] at h ⊢,
+  refine ⟨_⟩,
   {
-    intros x y hx hy hxy,
+    intros v hv,
     simp only [supp_microid_eq_integral],
-    rw [←measure_theory.integral_add],
+    simp only [finsupp.sum],
+    simp only [←measure_theory.integral_mul_left],
+    rw [←measure_theory.integral_finset_sum],
     refine integral_eq_of_eq_on_msupport _ _ _,
-    any_goals {apply measure_theory.integrable.add},
+    any_goals {apply measure_theory.integrable_finset_sum},
+    any_goals {intros G hG},
+    any_goals {apply measure_theory.integrable.const_mul},
     any_goals {apply supp_integrable},
     {
-      intros G hG,
-      obtain ⟨hadd, -⟩ := h G hG,
-      exact hadd x y hx hy hxy,
-    },
-  },
-  {
-    intros c x hx hcx,
-    simp only [supp_microid_eq_integral],
-    rw [←measure_theory.integral_smul],
-    refine integral_eq_of_eq_on_msupport _ _ _,
-    any_goals {apply measure_theory.integrable.smul},
-    any_goals {apply supp_integrable},
-    {
-      intros G hG,
-      obtain ⟨-, hsmul⟩ := h G hG,
-      exact hsmul c x hx hcx,
+      obtain ⟨hlin'⟩ := h G hG,
+      exact hlin' v hv,
     },
   },
 end

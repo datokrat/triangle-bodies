@@ -666,16 +666,6 @@ end default_reduction
 variables {V : Type}
 [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
-lemma le_sum_multiset_of_mem
-{C : multiset (submodule ℝ V)}
-{E : submodule ℝ V}
-(h : E ∈ C) :
-E ≤ C.sum :=
-begin
-  rcases multiset.exists_cons_of_mem h with ⟨D, rfl⟩,
-  simp only [multiset.sum_cons, submodule.add_eq_sup, le_sup_left],
-end
-
 lemma TS_microid_proj_eq_proj_TS_microid {k : ℕ}
 (μ : microid_measure V k)
 (E : submodule ℝ V)

@@ -1,5 +1,6 @@
 import data.multiset.basic data.real.basic
   analysis.inner_product_space.basic
+  data.multiset.fintype
 import tactic.wlog
 
 -- needed to get decidable_eq for sets!
@@ -26,6 +27,29 @@ begin
     have := C_ᾰ D D_lt_C ᾰ f,
     exact f D d this,
   }
+end
+
+lemma multiset.card_induction {α: Type} {β : α → Type} {p : Π {a : α}, multiset (β a) → Prop} {a : α} (C : multiset (β a)) :
+(∀ {b : α} (D : multiset (β b)), (∀ {c : α} (E : multiset (β c)), E.card < D.card → p E) → p D) → p C :=
+begin
+  intro ps,
+  generalize hn : C.card = n,
+  replace hn : C.card ≤ n := le_of_eq hn,
+  induction n with n ih generalizing C a,
+  {
+    rw [nat.le_zero_iff, multiset.card_eq_zero] at hn,
+    rcases hn with rfl,
+    apply ps,
+    simp only [multiset.card_zero, not_lt_zero', is_empty.forall_iff, forall_const],
+    tauto,
+  },
+  {
+    apply (ps C),
+    intros b E hE,
+    apply ih,
+    apply nat.le_of_lt_succ,
+    exact lt_of_lt_of_le hE hn,
+  },
 end
 
 lemma multiset_split_le' {F : multiset α} :
@@ -227,6 +251,16 @@ begin
   },
 end
 
+lemma le_sum_multiset_of_mem {V : Type} [inner_product_space ℝ V]
+{C : multiset (submodule ℝ V)}
+{E : submodule ℝ V}
+(h : E ∈ C) :
+E ≤ C.sum :=
+begin
+  rcases multiset.exists_cons_of_mem h with ⟨D, rfl⟩,
+  simp only [multiset.sum_cons, submodule.add_eq_sup, le_sup_left],
+end
+
 lemma multiset_sum_mono {V α: Type} [inner_product_space ℝ V]
 {C : multiset α}
 {f g : α → submodule ℝ V}
@@ -259,4 +293,136 @@ lemma cons_erase_cons {α : Type}
 a ::ₘ C - a ::ₘ D = C - D :=
 begin
   simp only [multiset.sub_cons, multiset.erase_cons_head],
+end
+
+lemma dite_true {α : Type} {p : Prop} (h : p) (ft : p → α) (ff : ¬p → α) :
+dite p ft ff = ft h :=
+begin
+  have : ft = λ h', ft h,
+  {
+    funext, refl,
+  },
+  rw [this],
+  apply dite_eq_left_iff.mpr,
+  intro hc,
+  have := hc h,
+  contradiction,
+end
+
+lemma dite_false {α : Type} {p : Prop} (h : ¬p) (ft : p → α) (ff : ¬p → α) :
+dite p ft ff = ff h :=
+begin
+  have : ff = λ h', ff h := rfl,
+  rw [this],
+  apply dite_eq_right_iff.mpr,
+  intro hc,
+  have := h hc,
+  contradiction,
+end
+
+noncomputable def multiset.add_to_enum_finset {α : Type}
+(C D : multiset α) :
+(C + D).to_enum_finset ≃ C.to_enum_finset ⊕ D.to_enum_finset :=
+begin
+  refine ⟨_, _, _, _⟩,
+  {
+    intro x,
+    by_cases h : x.val.snd < C.count x.val.fst,
+    {
+      left,
+      refine ⟨x.val, _⟩,
+      simp only [multiset.mem_to_enum_finset],
+      exact h,
+    },
+    {
+      right,
+      refine ⟨⟨x.val.fst, x.val.snd - C.count x.val.fst⟩, _⟩,
+      push_neg at h,
+      have := x.property,
+      simp only [multiset.mem_to_enum_finset] at this ⊢,
+      simp only [multiset.count_add] at this,
+      rcases nat.exists_eq_add_of_le h with ⟨l, hl⟩,
+      rw [hl, add_tsub_cancel_left],
+      zify at *,
+      linarith,
+    },
+  },
+  {
+    intro x,
+    rcases x with x | x,
+    {
+      refine ⟨x.val, _⟩,
+      have := x.property,
+      simp only [multiset.mem_to_enum_finset] at this ⊢,
+      refine lt_of_lt_of_le this _,
+      apply multiset.count_le_of_le,
+      simp only [le_add_iff_nonneg_right, zero_le],
+    },
+    {
+      refine ⟨⟨x.val.fst, x.val.snd + C.count x.val.fst⟩, _⟩,
+      have := x.property,
+      simp only [multiset.mem_to_enum_finset] at this ⊢,
+      simp only [multiset.count_add],
+      conv {to_lhs, rw [add_comm]},
+      simp only [subtype.val_eq_coe, add_lt_add_iff_left],
+      exact this,
+    },
+  },
+  {
+    simp only [function.left_inverse_iff_comp],
+    funext x,
+    simp only [function.comp_app, id.def],
+    by_cases h : x.val.snd < multiset.count x.val.fst C,
+    {
+      rw [dite_true h],
+      simp only [subtype.val_eq_coe, finset.mk_coe],
+    },
+    {
+      rw [dite_false h],
+      push_neg at h,
+      simp only [nat.sub_add_cancel h],
+      simp only [subtype.val_eq_coe, prod.mk.eta, finset.mk_coe],
+    },
+  },
+  {
+    simp only [function.right_inverse_iff_comp],
+    funext x,
+    cases x,
+    {
+      have := x.property,
+      simp only [subtype.val_eq_coe, subtype.coe_mk, not_lt, function.comp_app, finset.mk_coe, id.def, dite_eq_left_iff] at this ⊢,
+      simp only [multiset.mem_to_enum_finset] at this,
+      intro hc,
+      linarith,
+    },
+    {
+      have := x.property,
+      simp only [multiset.mem_to_enum_finset] at this,
+      simp only [subtype.val_eq_coe, subtype.coe_mk, add_lt_iff_neg_right, not_lt_zero', not_false_iff, function.comp_app,
+      add_tsub_cancel_right, prod.mk.eta, finset.mk_coe, dif_neg, id.def] at this ⊢,
+    },
+  },
+end
+
+noncomputable def multiset.glue_enum_fns {α β : Type}
+{C D : multiset α}
+(fC : C.to_enum_finset → β) (fD : D.to_enum_finset → β) :
+(C + D).to_enum_finset → β :=
+begin
+  intro x,
+  cases multiset.add_to_enum_finset C D x with k k,
+  {
+    exact fC k,
+  },
+  {
+    exact fD k,
+  },
+end
+
+@[simp]
+lemma multiset.zero_to_enum_finset {α : Type} :
+(0 : multiset α).to_enum_finset = ∅ :=
+begin
+  rw [←finset.card_eq_zero],
+  rw [multiset.card_to_enum_finset, multiset.card_zero],
 end

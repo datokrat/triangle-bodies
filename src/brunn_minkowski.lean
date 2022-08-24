@@ -1,4 +1,5 @@
-import convex convex_body linalg measure criticality
+import convex convex_body linalg measure criticality polytope
+  submodule_pair
   analysis.convex.basic
   data.multiset.basic
   measure_theory.measure.measure_space
@@ -65,10 +66,9 @@ def vol
 : nnreal :=
 sorry
 
-def area
+axiom area
 (C : multiset (convex_body V))
-: measure_theory.finite_measure (metric.sphere (0 : V) 1) :=
-sorry
+: measure_theory.finite_measure (metric.sphere (0 : V) 1)
 
 def is_vol_coll (C : multiset (convex_body V)) (E : submodule ℝ V) : Prop :=
 dim E = C.card ∧ multiset_all (convex_body_subset E) C
@@ -86,6 +86,7 @@ lemma factorize_vol
 vol (C + D) = vol C * vol (proj_coll Eᗮ D) :=
 sorry
 
+-- What happens if F is not ⊤?
 lemma factorize_area
 {E F : submodule ℝ V}
 {C : multiset (convex_body V)}
@@ -125,5 +126,62 @@ sorry
 
 lemma area_empty : msupport (area (0 : multiset (convex_body V))) = ⊤ :=
 sorry
+
+/- lemma polytope_area_discrete
+{C : multiset (polytope V)}
+(hC : is_area_coll (C.map convex_body_of_polytope) ⊤)
+{U : set (metric.sphere (0 : V) 1)}
+(hU : measurable_set U) :
+(area (C.map convex_body_of_polytope)).discrete := sorry -/
+
+/- lemma polytope_area_by_faces
+{C : multiset (polytope V)}
+(hC : is_area_coll (C.map convex_body_of_polytope) ⊤)
+(u : metric.sphere (0 : V) 1) :
+area (C.map convex_body_of_polytope) {u} =
+vol (C.map (λ P, (convex_body_of_polytope P).normal_face u)) :=
+sorry -/
+
+def τ (K : convex_body V) (U : set (metric.sphere (0 : V) 1)) : set V :=
+⋃ (u : metric.sphere (0 : V) 1) (H : u ∈ U),
+normal_face K.val u.val
+
+-- follows by polarization and the formula for the "unmixed" area
+lemma area_determined_by_τ
+{C : multiset (convex_body V)}
+{K L : convex_body V}
+(hC : is_area_coll (K ::ₘ C) ⊤)
+(hD : is_area_coll (L ::ₘ C) ⊤)
+{U : set (metric.sphere (0 : V) 1)}
+(hU : measurable_set U)
+(h : ∀ M : convex_body V, τ (K + M) U = τ (L + M) U) :
+area (K ::ₘ C) U = area (L ::ₘ C) U := sorry
+
+lemma is_area_coll_cons_of_head_subset
+{C : multiset (convex_body V)} {K L : convex_body V}
+{E : submodule ℝ V}
+(CD : K.val ⊆ L.val)
+(h : is_area_coll (L ::ₘ C) E) :
+is_area_coll (K ::ₘ C) E :=
+begin
+  split,
+  {
+    convert h.1 using 1,
+    simp only [multiset.card_cons],
+  },
+  {
+    intros M hM,
+    rw [multiset.mem_cons] at hM,
+    rcases hM with rfl | hM,
+    {
+      simp only [convex_body_subset],
+      refine subset_trans CD _,
+      exact h.2 L (multiset.mem_cons_self _ _),
+    },
+    {
+      exact h.2 M (multiset.mem_cons_of_mem hM),
+    },
+  },
+end
 
 end bm

@@ -118,11 +118,60 @@ begin
   },
 end
 
+lemma polytope_area_eq_face_area
+{C : multiset (convex_body V)}
+{P : polytope V}
+(hPC : bm.is_area_coll (convex_body_of_polytope P ::ₘ C) ⊤)
+{U : set (metric.sphere (0 : V) 1)} {u : metric.sphere (0 : V) 1}
+(hU₁ : measurable_set U)
+(hU₂ : ∀ v : metric.sphere (0 : V) 1, v ∈ U → normal_face P.val v.val = normal_face P.val u.val) :
+bm.area (convex_body_of_polytope P ::ₘ C) U =
+bm.area ((convex_body_of_polytope P).normal_face u.val ::ₘ C) U :=
+begin
+  refine bm.area_determined_by_τ hPC _ hU₁ _,
+  {
+    refine bm.is_area_coll_cons_of_head_subset _ hPC,
+    apply normal_face_subset,
+  },
+  {
+    intro M,
+    simp only [bm.τ],
+    congr,
+    funext v,
+    congr,
+    funext hv,
+    simp only [subtype.val_eq_coe, normal_face_add'],
+    congr' 1,
+    simp only [convex_body.normal_face, convex_body_of_polytope, subtype.val_eq_coe, subtype.coe_mk],
+    simp only [subtype.val_eq_coe, subtype.coe_mk] at hU₂,
+    rw [←hU₂ v hv],
+    simp only [normal_face_idem_poly],
+  },
+end
+
+lemma area_pos_iff_of_lfe_aux
+{P Q : polytope V} {U : set (metric.sphere (0 : V) 1)} {u : metric.sphere (0 : V) 1}
+{Ks : multiset (convex_body V)}
+(hPQ : lfe U P Q)
+(ac₁ : bm.is_area_coll (convex_body_of_polytope P ::ₘ Ks) ⊤)
+(ac₂ : bm.is_area_coll (convex_body_of_polytope Q ::ₘ Ks) ⊤)
+(hu : u ∈ U)
+(hU₁ : measurable_set U)
+(hU₂ : ∀ v : metric.sphere (0 : V) 1, v ∈ U → normal_face P.val v.val = normal_face P.val u.val) :
+bm.area (convex_body_of_polytope P ::ₘ Ks) U > 0 ↔
+bm.area (convex_body_of_polytope Q ::ₘ Ks) U > 0 :=
+begin
+  obtain ⟨x, c, cpos, hcx⟩ := hPQ u hu,
+  rw [polytope_area_eq_face_area ac₁ hU₁ hU₂],
+  admit,
+end
+
 lemma area_pos_iff_of_lfe
 {P Q : polytope V} {U : set (metric.sphere (0 : V) 1)}
 {Ks : multiset (convex_body V)}
 (hPQ : lfe U P Q)
-(hKs : dim V = Ks.card + 2) :
+(hKs : dim V = Ks.card + 2)
+(hU : measurable_set U) :
 bm.area (convex_body_of_polytope P ::ₘ Ks) U > 0 ↔
 bm.area (convex_body_of_polytope Q ::ₘ Ks) U > 0 :=
 begin
@@ -164,21 +213,20 @@ begin
   all_goals {
     rintro ⟨h₁, h₂⟩,
     refine ⟨_, h₂⟩,
-    intros W hW,
+    intros W hW₁ hW₂,
     refine lt_of_lt_of_le _
       (finite_measure_mono (set.inter_subset_left W (interior U))),
-    have : W ∩ interior U ∈ 𝓝 x,
+    have : x ∈ W ∩ interior U := ⟨hW₁, h₂⟩,
+    replace h₁ := h₁ _ this (is_open.inter hW₂ is_open_interior),
+    rw [area_pos_iff_of_lfe _ hKs] at h₁, exact h₁,
+    {exact (hW₂.inter is_open_interior).measurable_set},
     {
-      apply filter.inter_mem hW,
-      rw [mem_nhds_iff],
-      refine ⟨interior U, subset_refl _, _, h₂⟩,
-      exact is_open_interior,
+      exact lfe_mono (by exact hPQ <|> exact (lfe_symm hPQ)) (subset_trans (set.inter_subset_right W (interior U)) interior_subset : W ∩ interior U ⊆ U),
+      -- refine lfe_mono (lfe_symm hPQ) _,
+      -- refine subset_trans (set.inter_subset_right _ _) _,
+      -- exact interior_subset, strange errors ????????
+      -- -> all_goals!!!!
     },
-    replace h₁ := h₁ _ this,
-    simpa only [area_pos_iff_of_lfe _ /- magic!? -/ hKs] using h₁,
-    /- have hQP := lfe_symm hPQ,
-    refine lfe_mono (by assumption) _,
-    exact subset_trans (set.inter_subset_right W _) interior_subset, -/
   },
 end
 

@@ -12,7 +12,7 @@ variables {α : Type}
 
 def msupport
 (μ : measure_theory.finite_measure α) : set α :=
-{ x : α | ∀ U ∈ 𝓝 x, μ U > 0 }
+{ x : α | ∀ U : set α, x ∈ U → is_open U → μ U > 0 }
 
 lemma closed_msupport (μ : measure_theory.finite_measure α) :
 is_closed (msupport μ) := sorry
@@ -32,6 +32,14 @@ lemma msupport_subset_of_tendsto
 msupport lμ ⊆ closure (⋃ (n : ℕ), msupport (μ n)) :=
 sorry
 
+-- e.g., Prokhorov's metrization, as α is separable
+lemma measure_tendsto_nhds_unique
+{μ : ℕ → measure_theory.finite_measure α}
+{lμ₁ lμ₂ : measure_theory.finite_measure α}
+(h₁ : filter.tendsto μ filter.at_top (𝓝 lμ₁))
+(h₂ : filter.tendsto μ filter.at_top (𝓝 lμ₂)) :
+lμ₁ = lμ₂ := sorry
+
 instance finite_measure_val {α : Type} [measurable_space α] {μ : measure_theory.finite_measure α} :
 measure_theory.is_finite_measure μ.val := μ.property
 
@@ -43,5 +51,14 @@ begin
   refine ⟨measure_theory.measure.map f μ.val, _⟩,
   exact measure_theory.measure.is_finite_measure_map μ f,
 end
+
+/- def measure_theory.finite_measure.discrete (μ : measure_theory.finite_measure α) :=
+∃ S : set α, S.countable ∧ μ(Sᶜ) = 0
+
+lemma discrete_measure_ext
+{μ ν : measure_theory.finite_measure α}
+(hμ : μ.discrete) (hν : ν.discrete)
+{U : set α} (hU : measurable_set U) :
+μ U = ν U ↔ ∀ x : α, x ∈ U → μ {x} = ν {x} := sorry -/
 
 end msupport

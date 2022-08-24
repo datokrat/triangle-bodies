@@ -1,6 +1,8 @@
 import algebra.group.defs group_theory.submonoid.basic
   group_theory.submonoid.operations matryoshka microid_ops pre_pruning
 
+open_locale topological_space
+
 def p (V : Type) [add_monoid V] : Prop := sorry
 
 @[congr]
@@ -65,3 +67,12 @@ begin
   admit,
 end
 
+def f (a : ℕ) : ℕ := sorry
+
+example
+  {a b : ℕ}
+  (h : f a > 0) :
+  f b > 0 :=
+begin
+  exact h,
+end

@@ -403,6 +403,73 @@ begin
   },
 end
 
+@[simp]
+lemma normal_face_normalize
+(K : convex_body V) (u : V) :
+↑(K.normal_face u) = normal_face ↑K u :=
+begin
+  simp only [convex_body.normal_face, subtype.val_eq_coe, subtype.coe_mk],
+end
+
+@[simp]
+lemma normal_face_add
+(K L : convex_body V) (u : V) :
+(K + L).normal_face u = K.normal_face u + L.normal_face u :=
+begin
+  ext,
+  simp only [convex_body.normal_face],
+  simp only [subtype.val_eq_coe, subtype.coe_mk, mem_normal_face],
+  split,
+  {
+    simp only [and_imp],
+    rintro ⟨y, z, hy, hz, rfl⟩ h,
+    refine ⟨y, z, _, _, rfl⟩,
+    {
+      rw [subtype.val_eq_coe, subtype.coe_mk, mem_normal_face],
+      refine ⟨by assumption, _⟩,
+      intros w hw,
+      have := h (w + z) ⟨w, z, hw, hz, rfl⟩,
+      simpa only [inner_add_left, ge_iff_le, add_le_add_iff_right] using this,
+    },
+    {
+      rw [subtype.val_eq_coe, subtype.coe_mk, mem_normal_face],
+      refine ⟨by assumption, _⟩,
+      intros w hw,
+      have := h (y + w) ⟨y, w, hy, hw, rfl⟩,
+      simpa only [inner_add_left, ge_iff_le, add_le_add_iff_left] using this,
+    },
+  },
+  {
+    rintro ⟨y, z, hy, hz, rfl⟩,
+    simp only [mem_normal_face] at hy hz,
+    refine ⟨⟨y, z, hy.1, hz.1, rfl⟩, _⟩,
+    rintro - ⟨a, b, ha, hb, rfl⟩,
+    simp only [inner_add_left],
+    exact add_le_add (hy.2 a ha) (hz.2 b hb),
+  },
+end
+
+@[simp]
+lemma normal_face_add'
+(K L : convex_body V) (u : V) :
+normal_face ↑(K + L) u = normal_face ↑K u + normal_face ↑L u :=
+begin
+  have := normal_face_add K L u,
+  replace this := congr_arg (coe : convex_body V → set V) this,
+  exact this,
+end
+
+@[simp]
+lemma normal_face_idem'
+(K : convex_body V) (u : V) :
+normal_face (normal_face ↑K u) u = normal_face ↑K u :=
+begin
+  ext,
+  simp only [mem_normal_face, ge_iff_le, and_imp, and_iff_left_iff_imp],
+  intros xK hx y yK hy,
+  exact hx y yK,
+end
+
 /- noncomputable def convex_body_to_positive_homogeneous : convex_body V →+ (V → ℝ) :=
 {
   to_fun := λ K, finite_support_function K.prop,

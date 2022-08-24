@@ -35,27 +35,6 @@ begin
   exact hy,
 end
 
-
-lemma coe_ball_submodule {E : submodule ℝ V} (u : E) (ε : ℝ) :
-coe '' metric.ball u ε = metric.ball (u : V) ε ∩ E :=
-begin
-  ext,
-  simp only [set.mem_image, metric.mem_ball, set.mem_inter_iff],
-  split,
-  {
-    rintro ⟨e, he, rfl⟩,
-    refine ⟨_, e.property⟩,
-    simpa only [subtype.dist_eq] using he,
-  },
-  {
-    rintro ⟨h, xE⟩,
-    refine ⟨⟨x, xE⟩, _, rfl⟩,
-    {
-      simpa only [subtype.dist_eq, subtype.coe_mk] using h,
-    },
-  },
-end
-
 lemma coe_ball_affine {E : affine_subspace ℝ V} (u : E) (ε : ℝ) :
 coe '' metric.ball u ε = metric.ball (u : V) ε ∩ E :=
 begin

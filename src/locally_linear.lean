@@ -208,7 +208,28 @@ end
 lemma exists_basis_in_ball {ε : ℝ} (u : V) (εpos : ε > 0) :
 ∃ (ι : Type) (b : basis ι ℝ V), ∀ k : ι, b k ∈ metric.ball u ε :=
 begin
-  admit,
+  have := linear_independent_empty ℝ V,
+  let s := this.extend (set.empty_subset (metric.ball u ε)),
+  have sli := this.linear_independent_extend (set.empty_subset (metric.ball u ε)),
+  have sball : s ⊆ metric.ball u ε := this.extend_subset _,
+  let b : basis s ℝ V := basis.mk _ _, rotate,
+  {
+    intro x, exact x,
+  },
+  {
+    exact sli,
+  },
+  {
+    rw [←ball_spans_submodule ⊤ u submodule.mem_top εpos],
+    rw [submodule.span_le],
+    simp only [subtype.range_coe_subtype, set.set_of_mem_eq],
+    simp only [submodule.top_coe, set.inter_univ],
+    exact this.subset_span_extend _,
+  },
+  refine ⟨_, b, _⟩,
+  intro k,
+  rw [basis.mk_apply],
+  exact sball k.property,
 end
 
 lemma microid_supp_locally_linear_of_generators {k : ℕ} {ε : ℝ} {u : V}

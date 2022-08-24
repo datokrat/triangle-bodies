@@ -120,6 +120,137 @@ begin
   exact submodule.map_mono M.le,
 end
 
+--MOVETO linalg.lean
+lemma exists_equiv_to_image
+{W : Type} [inner_product_space ℝ W] [finite_dimensional ℝ V]
+(E : submodule ℝ V)
+(f : V →ₗ[ℝ] W) :
+∃ (T : submodule ℝ V), T ≤ E ∧ T ⊓ f.ker = ⊥ ∧ T.map f = E.map f :=
+begin
+  let g := (f.dom_restrict E).range_restrict,
+  -- linear_map.range_range_restrict
+  obtain ⟨h, hh⟩ := g.exists_right_inverse_of_surjective (linear_map.range_range_restrict _),
+  let H := h.range,
+  refine ⟨H.map E.subtype, submodule.map_subtype_le _ _, _, _⟩,
+  {
+    rw [submodule.eq_bot_iff],
+    intros x hx,
+    rw [submodule.mem_inf, submodule.mem_map] at hx,
+    obtain ⟨⟨y, yH, rfl⟩, hx⟩ := hx,
+    rw [linear_map.mem_range] at yH,
+    obtain ⟨z, rfl⟩ := yH,
+    rw [linear_map.mem_ker, submodule.coe_subtype] at hx,
+    simp only [submodule.coe_subtype, submodule.coe_eq_zero],
+    simp only [linear_map.ext_iff, linear_map.id_coe, id.def] at hh,
+    replace hh := hh z,
+    simp only [g, linear_map.comp_apply, linear_map.range_restrict] at hh,
+    replace hh := congr_arg (submodule.subtype _) hh,
+    simp only [submodule.coe_subtype, linear_map.cod_restrict_apply, linear_map.dom_restrict_apply] at hh,
+    rw [hh] at hx,
+    have : (0 : W) = ↑(0 : (f.dom_restrict E).range) := rfl,
+    rw [this] at hx,
+    replace hx := subtype.coe_injective hx,
+    rw [hx],
+    simp only [map_zero],
+  },
+  {
+    simp only [H, linear_map.range_eq_map, ←submodule.map_comp, ←linear_map.dom_restrict],
+    rw [←linear_map.comp_assoc],
+    ext,
+    simp only [submodule.mem_map],
+    split,
+    {
+      rintro ⟨y, -, rfl⟩,
+      refine ⟨E.subtype.comp h y, _⟩,
+      simp only [linear_map.comp_apply, submodule.coe_subtype],
+      simp only [submodule.coe_mem, eq_self_iff_true, and_self],
+    },
+    {
+      rintro ⟨y, yE, rfl⟩,
+      refine ⟨⟨(f.dom_restrict E) ⟨y, yE⟩, linear_map.mem_range_self _ _⟩, _, _⟩,
+      {
+        apply submodule.mem_top,
+      },
+      simp only [g, linear_map.dom_restrict, linear_map.ext_iff] at hh,
+      simp only [linear_map.comp_apply, linear_map.range_restrict] at hh ⊢,
+      replace hh := congr_arg (submodule.subtype _) (hh ⟨(f.dom_restrict E ⟨y, yE⟩), linear_map.mem_range_self _ _⟩),
+      simp only [submodule.coe_subtype, linear_map.cod_restrict_apply] at hh,
+      simp only [linear_map.id_coe, id.def, linear_map.dom_restrict_apply, submodule.coe_subtype] at hh ⊢,
+      rw [hh, submodule.coe_mk, submodule.coe_mk],
+    },
+  },
+end
+
+lemma exists_dim_eq_dim_image
+{W : Type} [inner_product_space ℝ W] [finite_dimensional ℝ V]
+{E : submodule ℝ V}
+(f : V →ₗ[ℝ] W) :
+∃ T : submodule ℝ V, T ≤ E ∧ f.ker ⊓ T = ⊥ ∧ T.map f = E.map f :=
+begin
+  obtain ⟨T, hT₁, hT₂, hT₃⟩ := exists_equiv_to_image E f,
+  refine ⟨T, hT₁, _, hT₃⟩,
+  {
+    rw [inf_comm, hT₂],
+  },
+end
+
+lemma exists_dim_eq_dim_image'
+{W : Type} [inner_product_space ℝ W] [finite_dimensional ℝ V]
+{E : submodule ℝ V} {F : submodule ℝ W}
+(f : V →ₗ[ℝ] W)
+(FE : F ≤ E.map f) :
+∃ T : submodule ℝ V, T ≤ E ∧ f.ker ⊓ T = ⊥ ∧ T.map f = F :=
+begin
+  obtain ⟨T, hT₁, hT₂, hT₃⟩ := exists_equiv_to_image E f,
+  refine ⟨T ⊓ F.comap f, _, _, _⟩,
+  {
+    exact le_trans inf_le_left hT₁,
+  },
+  {
+    rw [inf_comm] at hT₂,
+    refine le_antisymm _ bot_le,
+    refine le_trans (inf_le_inf_left _ inf_le_left) _,
+    exact le_of_eq hT₂,
+  },
+  {
+    apply le_antisymm,
+    {
+      refine le_trans (submodule.map_mono inf_le_right) _,
+      apply submodule.map_comap_le,
+    },
+    {
+      rw [←hT₃] at FE,
+      intros f hf,
+      have := FE hf,
+      rw [submodule.mem_map] at this ⊢,
+      obtain ⟨y, yT, rfl⟩ := this,
+      refine ⟨y, _, rfl⟩,
+      rw [submodule.mem_inf, submodule.mem_comap],
+      exact ⟨yT, hf⟩,
+    },
+  },
+end
+
+-- MOVETO multiset.lean
+lemma multiset.exists_of_exists_elementwise {α β: Type}
+{C : multiset α}
+{p : α → β → Prop}
+(h : multiset_all (λ a, ∃ b : β, p a b) C) :
+∃ D : multiset ({x : α × β // p x.fst x.snd }), C = D.map (λ x, x.val.fst) :=
+begin
+  induction C using pauls_multiset_induction with C a ih,
+  {
+    refine ⟨0, _⟩,
+    rw [multiset.map_zero],
+  },
+  {
+    obtain ⟨b, pab⟩ := h a (multiset.mem_cons_self _ _),
+    obtain ⟨D, hD⟩ := ih (multiset.all_of_le (multiset.le_cons_self _ _) h),
+    refine ⟨⟨⟨a, b⟩, pab⟩ ::ₘ D, _⟩,
+    simp only [hD, subtype.val_eq_coe, multiset.map_cons, subtype.coe_mk, multiset.cons_inj_right],
+  },
+end
+
 lemma multiset.lift_submodules
 {C : multiset (submodule ℝ V)}
 {E : submodule ℝ V}
@@ -128,7 +259,61 @@ lemma multiset.lift_submodules
 ∃ F, F ⊑ₘ C ∧ D = F.map (project_subspace E) ∧
 multiset_all (λ W, (proj E).ker ⊓ W = ⊥) F :=
 begin
-  admit,
+  obtain ⟨X, ⟨hX', hX⟩⟩ := DC,
+  obtain ⟨Y, YX, YC⟩ := multiset.exists_join' hX,
+  let Z : multiset {pr : submodule ℝ V × submodule ℝ E // pr.snd ≤ project_subspace E pr.fst} :=
+  Y.map (λ pr, ⟨⟨pr.val.snd, pr.val.fst.small⟩, _⟩), rotate,
+  {
+    rw [←pr.property],
+    exact pr.val.fst.le,
+  },
+  have ZC : C = Z.map (λ x, x.val.fst),
+  {
+    rw [←YC, multiset.map_map],
+  },
+  have ZD : D = Z.map (λ x, x.val.snd),
+  {
+    rw [←hX', ←YX, multiset.map_map, multiset.map_map],
+  },
+  clear_value Z,
+  clear' X hX' hX Y YX YC,
+  have : multiset_all (λ z : {z : submodule ℝ V × submodule ℝ E // z.snd ≤ project_subspace E z.fst},
+  ∃ U : submodule ℝ V, U ≤ z.val.fst ∧ project_subspace E U = z.val.snd ∧ (proj E).ker ⊓ U = ⊥) Z,
+  {
+    intros z hz,
+    have := z.property,
+    simp only [project_subspace] at this,
+    obtain ⟨U, hU₁, hU₂, hU₃⟩ := exists_dim_eq_dim_image' _ this,
+    exact ⟨U, hU₁, hU₃, hU₂⟩,
+  },
+  obtain ⟨W, hW⟩ := multiset.exists_of_exists_elementwise this,
+  let K : multiset (submodule_pair V) := W.map (λ w, ⟨w.val.fst.val.fst, ⟨w.val.snd, w.property.1⟩⟩),
+  have KC: C = K.map (λ k, k.fst),
+  {
+    simp only [ZC, hW, multiset.map_map],
+  },
+  refine ⟨K.map (λ k, k.snd.val), _, _, _⟩,
+  {
+    refine ⟨K, rfl, _⟩,
+    {
+      rw [KC],
+      refl,
+    },
+  },
+  {
+    rw [ZD, hW],
+    simp only [subtype.val_eq_coe, multiset.map_map, function.comp_app, subtype.coe_mk],
+    congr, funext x,
+    exact x.property.2.1.symm,
+  },
+  {
+    intros W hW,
+    rw [multiset.mem_map] at hW,
+    obtain ⟨k, kK, rfl⟩ := hW,
+    rw [multiset.mem_map] at kK,
+    obtain ⟨w, wW, rfl⟩ := kK,
+    exact w.property.2.2,
+  },
 end
 
 noncomputable def span_singleton (x : V) : submodule ℝ V := submodule.span ℝ {x}

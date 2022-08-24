@@ -1,4 +1,4 @@
-import convex touching_cone
+import convex touching_cone linalg
 
 open_locale pointwise
 
@@ -36,22 +36,6 @@ begin
     simp only [this, ←inner_add_right, add_sub_cancel'_right],
     exact wua.2 y yP,
   },
-end
-
-lemma ball_spans_submodule (E : submodule ℝ V) (u : V) (uE : u ∈ E)
-{ε : ℝ} (εpos : ε > 0) :
-submodule.span ℝ (metric.ball u ε ∩ E) = E :=
-begin
-  let u' : E := ⟨u, uE⟩,
-  suffices h : submodule.span ℝ (metric.ball u' ε) = ⊤,
-  {
-    simp only [u'] at h,
-    replace h := congr_arg (submodule.map E.subtype) h,
-    simp only [submodule.map_span] at h,
-    simp only [submodule.coe_subtype, submodule.map_subtype_top] at h,
-    simpa only [coe_ball_submodule, submodule.coe_mk] using h,
-  },
-  exact span_top_of_ball_subset εpos (subset_refl _),
 end
 
 lemma polytope_vspan_pre_touching_cone {P : set V} (hP : is_polytope P) (u : V) :

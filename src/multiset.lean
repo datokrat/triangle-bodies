@@ -463,6 +463,37 @@ begin
   {intro h, simp only [*, multiset.map_zero]},
 end
 
+lemma multiset.exists_join' {α β γ : Type} {f : α → γ} {g : β → γ}
+{C : multiset α} {D : multiset β} (h : C.map f = D.map g) :
+∃ E : multiset ({pr : α × β // f pr.fst = g pr.snd}),
+E.map (λ pr, pr.val.fst) = C ∧ E.map (λ pr, pr.val.snd) = D :=
+begin
+  revert D,
+  induction C using pauls_multiset_induction with C a ih,
+  {
+    intros D h,
+    simp only [multiset.map_eq_zero, exists_eq_left, multiset.map_zero],
+    simp only [multiset.map_zero, multiset.zero_eq_map] at h,
+    simp only [h, eq_self_iff_true, true_and, multiset_all_zero],
+  },
+  {
+    intros D h,
+    simp only [multiset.map_cons] at h,
+    have : f a ∈ D.map g := h ▸ multiset.mem_cons_self (f a) (C.map f),
+    rw [multiset.mem_map] at this,
+    obtain ⟨b, bD, hd⟩ := this,
+    obtain ⟨D, rfl⟩ := multiset.exists_cons_of_mem bD,
+    simp only [multiset.map_cons, hd, multiset.cons_inj_right] at h,
+    obtain ⟨E, hE⟩ := ih h,
+    refine ⟨⟨⟨a, b⟩, _⟩ ::ₘ E, _⟩,
+    {simp only [hd]},
+    {
+      simp only [subtype.val_eq_coe, multiset.map_cons, subtype.coe_mk, multiset.cons_inj_right],
+      exact hE,
+    },
+  },
+end
+
 lemma multiset.exists_join {α β γ : Type} {f : α → γ} {g : β → γ}
 {C : multiset α} {D : multiset β} (h : C.map f = D.map g) :
 ∃ E : multiset (α × β), E.map prod.fst = C ∧ E.map prod.snd = D ∧
@@ -491,4 +522,89 @@ begin
     {exact hd.symm},
     {simp only [multiset_all, prod.forall] at hE, tauto},
   },
+end
+
+@[simp]
+lemma multiset.sum_linear_map
+{V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
+{W : Type} [inner_product_space ℝ W] [finite_dimensional ℝ W]
+(C : multiset (submodule ℝ V)) (f : V →ₗ[ℝ] W) :
+submodule.map f C.sum = (C.map (submodule.map f)).sum :=
+begin
+  induction C using pauls_multiset_induction,
+  {
+    simp only [multiset.map_zero, multiset.sum_zero, submodule.zero_eq_bot, submodule.map_bot],
+  },
+  {
+    simp only [*, multiset.map_cons, multiset.sum_cons, submodule.add_eq_sup, submodule.map_sup],
+  },
+end
+
+lemma dim_add_le_dim_add_dim' {V : Type}
+[inner_product_space ℝ V] [finite_dimensional ℝ V]
+{U W : submodule ℝ V} :
+finite_dimensional.finrank ℝ (U + W : submodule ℝ V) ≤ finite_dimensional.finrank ℝ U + finite_dimensional.finrank ℝ W :=
+begin
+  have := dim_add_le_dim_add_dim U W,
+  simp only [←finite_dimensional.finrank_eq_dim] at this,
+  rw [←cardinal.nat_cast_le, nat.cast_add],
+  exact this,
+end
+
+lemma multiset.dim_sum_le_sum_dim {V : Type}
+[inner_product_space ℝ V] [finite_dimensional ℝ V]
+(C : multiset (submodule ℝ V)) :
+finite_dimensional.finrank ℝ C.sum ≤ (C.map (λ W : submodule ℝ V, finite_dimensional.finrank ℝ W)).sum :=
+begin
+  induction C using pauls_multiset_induction with C W ih,
+  {
+    simp only [multiset.map_zero, multiset.sum_zero, le_zero_iff, finrank_eq_zero, submodule.zero_eq_bot],
+  },
+  {
+    rw [multiset.map_cons, multiset.sum_cons, multiset.sum_cons],
+    refine le_trans _ (add_le_add_left ih _),
+    apply dim_add_le_dim_add_dim',
+  },
+end
+
+lemma multiset.sum_one {C : multiset ℕ}
+(h : multiset_all (λ n, n = 1) C) :
+C.sum = C.card :=
+begin
+  induction C using pauls_multiset_induction with C n ih,
+  {
+    simp only [multiset.sum_zero, multiset.card_zero],
+  },
+  {
+    simp only [multiset.sum_cons, multiset.card_cons],
+    replace ih := ih (λ n hn, h n (multiset.mem_cons_of_mem hn)),
+    rw [ih, h n (multiset.mem_cons_self _ _)],
+    ac_refl,
+  },
+end
+
+lemma multiset.all_map {α β: Type} {C : multiset α}
+(f : α → β) (p : β → Prop) :
+multiset_all p (C.map f) ↔ multiset_all (p ∘ f) C :=
+begin
+  simp only [multiset_all, multiset.mem_map, forall_exists_index, and_imp, forall_apply_eq_imp_iff₂],
+end
+
+lemma multiset.all_of_le {α : Type} {C D : multiset α} {p : α → Prop}
+(CD : C ≤ D) :
+multiset_all p D → multiset_all p C :=
+begin
+  simp only [multiset_all],
+  intros h a aC,
+  exact h a ((multiset.subset_of_le CD) aC),
+end
+
+@[simp]
+lemma multiset.all_add {α : Type} {C D : multiset α} {p : α → Prop} :
+multiset_all p (C + D) ↔ multiset_all p C ∧ multiset_all p D :=
+begin
+  simp only [multiset_all, multiset.mem_add],
+  split,
+  {exact λ h, ⟨λ a aC, h a (or.inl aC), λ a aC, h a (or.inr aC)⟩},
+  {tauto},
 end

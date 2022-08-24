@@ -1,5 +1,5 @@
 import algebra.group.defs group_theory.submonoid.basic
-  group_theory.submonoid.operations tactic matryoshka microid_ops pre_pruning
+  group_theory.submonoid.operations matryoshka microid_ops pre_pruning
 
 def p (V : Type) [add_monoid V] : Prop := sorry
 

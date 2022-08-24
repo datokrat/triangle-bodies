@@ -740,6 +740,16 @@ begin
   apply linear_map.finrank_range_add_finrank_ker g,
 end
 
+lemma dim_image_le_self
+  {K : Type} {V : Type} [field K] [add_comm_group V] [module K V]
+  {V₂ : Type} [add_comm_group V₂] [module K V₂] [finite_dimensional K V]
+  (f : V →ₗ[K] V₂) (W : submodule K V) :
+finite_dimensional.finrank K (W.map f) ≤ finite_dimensional.finrank K W :=
+begin
+  rw [←subspace_rank_nullity f W],
+  simp only [le_add_iff_nonneg_right, zero_le'],
+end
+
 lemma dim_image_ge_dim_domain_sub_dim_ker
   {K : Type} {V : Type} [field K] [add_comm_group V] [module K V]
   {V₂ : Type} [add_comm_group V₂] [module K V₂] [finite_dimensional K V]
@@ -765,6 +775,16 @@ end
 
 noncomputable def project_subspace (E F : submodule ℝ V) : submodule ℝ E :=
 F.map (orthogonal_projection E).to_linear_map
+
+@[simp]
+lemma multiset.sum_project_subspace
+(E : submodule ℝ V)
+(C : multiset (submodule ℝ V)) :
+project_subspace E C.sum = (C.map (project_subspace E)).sum :=
+begin
+  apply C.sum_linear_map,
+  apply_instance,
+end
 
 lemma map_vector_span {R : Type} {M : Type} {M₂ : Type} [field R]
 [add_comm_group M] [module R M] {σ₁₂ : R →+* R} [add_comm_group M₂] 

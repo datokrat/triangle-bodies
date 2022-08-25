@@ -917,3 +917,109 @@ begin
     exact h s sA,
   },
 end
+
+
+
+lemma h_normal_face_homothety (A : set V) (u : V) (c : ℝ) (v : V)
+(h : c > 0) : normal_face (c • (A + {v})) u ⊆ c • (normal_face A u + {v}) :=
+begin
+  simp only [normal_face],
+  intro x,
+  {
+    intros hx,
+    replace hx := set.mem_set_of.mp hx,
+    rcases set.mem_smul_set.mp hx.1 with ⟨y, hy, rfl⟩,
+    refine set.mem_smul_set.mpr (set.smul_mem_smul_set _),
+    apply set.mem_set_of.mpr,
+    refine ⟨y - v, v, _, _⟩,
+    {
+      apply set.mem_set_of.mpr,
+      rcases hy with ⟨a, vv, ha, hvv, rfl⟩,
+      rcases set.eq_of_mem_singleton hvv,
+      split,
+      {
+        simp only [ha, add_sub_cancel],
+      },
+      {
+        intros y hy,
+        replace hx := hx.2,
+        have := hx (c • (y + v)) _,
+        {
+          simp only [inner_smul_left, inner_add_left,
+            is_R_or_C.conj_to_real, (smul_eq_mul ℝ).symm] at this,
+          replace := (smul_le_smul_iff_of_pos h).mp this,
+          simpa only [add_sub_cancel, add_le_add_iff_right] using this,
+        },
+        {
+          refine set.smul_mem_smul_set ⟨y, v, hy, _, rfl⟩,
+          exact set.mem_singleton _,
+        },
+      },
+    },
+    {
+      refine ⟨set.mem_singleton _, by simp only [sub_add_cancel]⟩,
+    },
+  },
+end
+
+lemma normal_face_homothety {A : set V} {u : V} {c : ℝ} (v : V)
+(h : c > 0) : normal_face (c • (A + {v})) u = c • (normal_face A u + {v}) :=
+begin
+  apply subset_antisymm,
+  {
+    apply h_normal_face_homothety A u c v h,
+  },
+  {
+    let B := c • (A + {v}),
+    refine (set.set_smul_subset_iff₀ (ne_of_gt h)).mpr _,
+    suffices hh : normal_face A u ⊆ c⁻¹ • (normal_face (c • (A + {v})) u + {-c • v}),
+    {
+      rintro x ⟨n, vv, hn, hvv, rfl⟩,
+      cases set.eq_of_mem_singleton hvv,
+      rcases set.mem_smul_set.mp (hh hn) with ⟨a, ha, rfl⟩,
+      refine set.mem_smul_set.mpr ⟨a - (-c) • v, _, _⟩,
+      {
+        rcases ha with ⟨b, d, hb, hd, rfl⟩,
+        cases set.eq_of_mem_singleton hd,
+        convert hb,
+        simp only [add_sub_cancel],
+      },
+      {
+        simp only [neg_smul, sub_neg_eq_add, smul_add, add_right_inj,
+          inv_smul_smul₀ (ne_of_gt h)],
+      },
+    },
+    convert h_normal_face_homothety B u c⁻¹ (-c • v) (inv_pos_of_pos h),
+    ext, split,
+    {
+      intro hx,
+      refine (set.mem_smul_set_iff_inv_smul_mem₀ (ne_of_gt (inv_pos_of_pos h)) _ _).mpr _,
+      simp only [B, inv_inv, set.add_singleton, neg_smul, set.image_add_right,
+        set.mem_preimage, neg_neg],
+      refine set.mem_smul_set.mpr _,
+      refine ⟨x + v, _, _⟩,
+      {
+        refine (set.mem_preimage).mpr _,
+        convert hx,
+        simp only [add_neg_cancel_right],
+      },
+      {
+        rw [smul_add],
+      },
+    },
+    {
+      intro hx,
+      rcases set.mem_smul_set.mp hx with ⟨y, ⟨b, w, hb, hw, rfl⟩, rfl⟩,
+      rcases set.eq_of_mem_singleton hw,
+      simp only [B] at hb,
+      rcases set.mem_smul_set.mp hb with ⟨d, ⟨e, q, he, hq, rfl⟩, rfl⟩,
+      rcases set.eq_of_mem_singleton hq,
+      simp only [neg_smul, sub_neg_eq_add, smul_add,
+        sub_neg_eq_add],
+      simp only [smul_neg, (smul_assoc _ _ _).symm,
+        (inv_mul_eq_one₀ (ne_of_gt h)).mpr rfl, smul_eq_mul, one_smul,
+        add_neg_cancel_right],
+      assumption,
+    },
+  },
+end

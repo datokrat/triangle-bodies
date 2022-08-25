@@ -761,15 +761,16 @@ begin
   },
   {
     intros H hH,
-    intros w hw,
     refine ⟨0, 1, zero_lt_one, _⟩,
     rw [one_smul],
     simp only [subtype.val_eq_coe, set.singleton_add, zero_add, set.image_id'],
     symmetry,
+    simp only [bm.τ],
+    congr, funext v, congr, funext hv,
     refine face_chop_eq_of_generator_face _ _,
     rintro l hl,
     refine ⟨gfin ⟨l, _⟩, _⟩,
-    {exact (h H.val w hH hw) hl},
+    {exact (h H.val v hH hv) hl},
     {
       simp only [facial_chop_fn, equiv.inv_fun_as_coe,
         function.comp_app, equiv.symm_apply_apply,

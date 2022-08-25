@@ -4,6 +4,7 @@ import convex face linalg
   analysis.inner_product_space.dual
 
 open_locale pointwise
+open_locale nnreal
 
 def convex_body (V : Type)
 [inner_product_space ℝ V] [finite_dimensional ℝ V] :=
@@ -218,6 +219,173 @@ instance : has_lift_t (convex_body V) (set V) :=
 {
   lift := (coe : { K // is_convex_body K } → set V)
 }
+
+@[simp]
+lemma convex_body.coe_add
+{K L : convex_body V} :
+(↑(K + L) : set V) = ↑K + ↑L := rfl
+
+@[simp]
+lemma convex_body.coe_zero :
+(↑(0 : convex_body V) : set V) = (0 : set V) := rfl
+
+instance convex_body_has_smul : has_smul ℝ≥0 (convex_body V) :=
+{
+  smul :=
+  begin
+    intros c K,
+    refine ⟨c • K.val, _⟩,
+    obtain ⟨Kcv, Kcp, Kne⟩ := K.property,
+    refine ⟨_, _, _⟩,
+    {
+      apply Kcv.smul,
+    },
+    {
+      simp only [has_smul.smul],
+      simp only [has_smul.comp.smul, nnreal.coe_to_real_hom],
+      refine Kcp.image _,
+      by continuity,
+    },
+    {
+      apply Kne.smul_set,
+    },
+  end,
+}
+
+@[simp]
+lemma convex_body.coe_smul
+{c : ℝ≥0} {K : convex_body V} :
+(↑(c • K) : set V) = c • ↑K := rfl
+
+instance convex_body_mul_action : mul_action ℝ≥0 (convex_body V) :=
+{
+  to_has_smul := convex_body_has_smul,
+  one_smul :=
+  begin
+    intro K,
+    simp only [has_smul.smul, subtype.val_eq_coe, has_smul.comp.smul, nnreal.coe_to_real_hom, nonneg.coe_one, one_smul,
+    set.image_id', subtype.coe_eta],
+  end,
+  mul_smul :=
+  begin
+    intros c d K,
+    simp only [has_smul.smul],
+    simp only [has_smul.comp.smul, nnreal.coe_to_real_hom, nonneg.coe_mul, set.image_smul, subtype.val_eq_coe, subtype.mk_eq_mk],
+    simp only [smul_smul],
+  end
+}
+
+instance convex_body_distrib_mul_action : distrib_mul_action ℝ≥0 (convex_body V) :=
+{
+  to_mul_action := convex_body_mul_action,
+  smul_add :=
+  begin
+    intros c K L,
+    simp only [has_smul.smul],
+    simp only [has_smul.comp.smul, nnreal.coe_to_real_hom, set.image_smul, subtype.val_eq_coe, convex_body.coe_add, smul_add],
+    simp only [subtype.ext_iff],
+    simp only [convex_body.coe_add, subtype.coe_mk],
+  end,
+  smul_zero :=
+  begin
+    intros c,
+    simp only [subtype.ext_iff, convex_body.coe_smul, convex_body.coe_zero, smul_zero],
+  end
+}
+
+instance convex_body_module : module ℝ≥0 (convex_body V) :=
+{
+  to_distrib_mul_action := convex_body_distrib_mul_action,
+  add_smul :=
+  begin
+    intros c d K,
+    simp only [subtype.ext_iff, convex_body.coe_smul, convex_body.coe_add],
+    simp only [has_smul.smul],
+    ext,
+    simp only [set.mem_image, set.mem_add],
+    split,
+    {
+      rintro ⟨x, xK, rfl⟩,
+      refine ⟨c • x, d • x, ⟨x, _, rfl⟩, ⟨x, _, rfl⟩, _⟩,
+      {assumption}, {assumption},
+      simp only [add_smul, has_smul.comp.smul, nnreal.coe_to_real_hom, nonneg.coe_add],
+      refl,
+    },
+    {
+      rintro ⟨cx, cy, ⟨x, hx, rfl⟩, ⟨x', hx', rfl⟩, rfl⟩,
+      by_cases h : c = 0 ∧ d = 0,
+      {
+        simp only [h.1, h.2, add_zero, has_smul.comp.smul, nnreal.coe_to_real_hom, nonneg.coe_zero, zero_smul,
+        eq_self_iff_true, and_true],
+        exact ⟨x, hx⟩,
+      },
+      {
+        have : c + d > 0,
+        {
+          by_contra hc,
+          push_neg at hc,
+          rw [←bot_eq_zero, le_bot_iff, bot_eq_zero] at hc,
+          simp only [add_eq_zero_iff] at hc,
+          exact h hc,
+        },
+        replace : (↑c : ℝ) + ↑d > 0 := this,
+        simp only [has_smul.comp.smul, nnreal.coe_to_real_hom, nonneg.coe_add],
+        refine ⟨(c / (c + d)) • x + (d / (c + d)) • x', _⟩,
+        have ha : (c + d) • (c / (c + d)) • x = x,
+        {
+          admit,
+        },
+        have hb : (c + d) • (d / (c + d)) • x' = x',
+        {
+          admit,
+        },
+        refine ⟨_, _⟩,
+        {
+          apply K.property.1 hx hx',
+          any_goals {apply nnreal.coe_nonneg},
+          rw [←map_add],
+          simp only [nnreal.coe_to_real_hom, nonneg.coe_add, nonneg.coe_div],
+          rw [←add_div, div_self (ne_of_gt this)],
+        },
+        {
+          rw [smul_add],
+          simp only [nnreal.smul_def, nonneg.coe_div, nonneg.coe_add],
+          simp only [smul_smul, mul_div_cancel' _ (ne_of_gt this)],
+        },
+      },
+    },
+  end,
+  zero_smul :=
+  begin
+    intro K,
+    apply subtype.coe_injective,
+    simp only [convex_body.coe_smul, convex_body.coe_zero],
+    rw [←subtype.val_eq_coe, set.zero_smul_set K.property.2.2],
+  end
+}
+
+instance convex_body_has_singleton : has_singleton V (convex_body V) :=
+{
+  singleton :=
+  begin
+    intro x,
+    refine ⟨{x}, _, _, _⟩,
+    {
+      exact convex_singleton x,
+    },
+    {
+      exact is_compact_singleton,
+    },
+    {
+      exact set.singleton_nonempty x,
+    },
+  end
+}
+
+@[simp]
+lemma convex_body.coe_singleton
+(x : V) :
+(↑({x} : convex_body V) : set V) = {x} := rfl
 
 lemma coe_zero_body_eq : (coe (0 : convex_body V) : set V) = ({0} : set V) :=
 rfl

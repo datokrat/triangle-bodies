@@ -60,11 +60,10 @@ end
 
 namespace bm
 
-def vol
+axiom vol
 (C : multiset (convex_body V))
 -- (hdim : common_dimension C ≤ C.card)
-: nnreal :=
-sorry
+: nnreal
 
 axiom area
 (C : multiset (convex_body V))
@@ -111,6 +110,21 @@ lemma vol_continuous
 : filter.tendsto (λ n, vol (C1 n ::ₘ C)) filter.at_top (𝓝 (vol (C1lim ::ₘ C))) :=
 sorry
 
+lemma area_cons_translate
+{E : submodule ℝ V}
+{K : convex_body V}
+{C : multiset (convex_body V)} {x : V}
+(xE : x ∈ E)
+(hC : is_area_coll (K ::ₘ C) E) :
+area ((K + {x}) ::ₘ C) = area (K ::ₘ C) := sorry
+
+lemma area_cons_smul
+{E : submodule ℝ V}
+{K : convex_body V}
+{C : multiset (convex_body V)} {c : nnreal}
+(hC : is_area_coll (K ::ₘ C) E) :
+area ((c • K) ::ₘ C) = c • area (K ::ₘ C) := sorry
+
 lemma area_continuous
 {E : submodule ℝ V}
 (C : multiset (convex_body V))
@@ -142,12 +156,22 @@ area (C.map convex_body_of_polytope) {u} =
 vol (C.map (λ P, (convex_body_of_polytope P).normal_face u)) :=
 sorry -/
 
+def τ' (A : set V) (U : set (metric.sphere (0 : V) 1)) : set V :=
+⋃ (u : metric.sphere (0 : V) 1) (uU : u ∈ U),
+normal_face A u.val
+
 def τ (K : convex_body V) (U : set (metric.sphere (0 : V) 1)) : set V :=
 ⋃ (u : metric.sphere (0 : V) 1) (H : u ∈ U),
 normal_face K.val u.val
 
--- follows by polarization and the formula for the "unmixed" area
-lemma area_determined_by_τ
+-- This is tricky.
+-- If K, L are full-dimensional, follows by polarization and the formula for the "unmixed" area.
+-- The area measures of all sums appearing in the polarization formula are equal:
+-- If K/L is not part of the sum, trivial
+-- Otherwise, use the τ formula (Schneider, Theorem 4.2.3)
+-- If K, L are not full-dimensional, apply the above special case
+-- for K+B/L+B and B/B and use additivity of area
+lemma area_determined_by_τ_add
 {C : multiset (convex_body V)}
 {K L : convex_body V}
 (hC : is_area_coll (K ::ₘ C) ⊤)

@@ -62,7 +62,6 @@ namespace bm
 
 axiom vol
 (C : multiset (convex_body V))
--- (hdim : common_dimension C ≤ C.card)
 : nnreal
 
 axiom area
@@ -72,8 +71,8 @@ axiom area
 def is_vol_coll (C : multiset (convex_body V)) (E : submodule ℝ V) : Prop :=
 dim E = C.card ∧ multiset_all (convex_body_subset E) C
 
-def is_area_coll (C : multiset (convex_body V)) (E : submodule ℝ V) : Prop :=
-dim E = C.card + 1 ∧ multiset_all (convex_body_subset E) C
+def is_area_coll (C : multiset (convex_body V))  : Prop :=
+dim V = C.card + 1
 
 lemma factorize_vol
 {C : multiset (convex_body V)}
@@ -87,12 +86,11 @@ sorry
 
 -- What happens if F is not ⊤?
 lemma factorize_area
-{E F : submodule ℝ V}
+{E : submodule ℝ V}
 {C : multiset (convex_body V)}
 {D : multiset (convex_body V)}
 (hC : is_vol_coll C E)
-(hCD : is_area_coll (C + D) F)
-(hEF : E ≤ F)
+(hCD : is_area_coll (C + D))
 (hsc : semicritical_spaces (C.map span_of_convex_body)) :
 msupport (area (C + D)) = coe_sph Eᗮ '' msupport (area (proj_coll Eᗮ D)) :=
 sorry
@@ -111,26 +109,22 @@ lemma vol_continuous
 sorry
 
 lemma area_cons_translate
-{E : submodule ℝ V}
 {K : convex_body V}
 {C : multiset (convex_body V)} {x : V}
-(xE : x ∈ E)
-(hC : is_area_coll (K ::ₘ C) E) :
+(hC : is_area_coll (K ::ₘ C)) :
 area ((K + {x}) ::ₘ C) = area (K ::ₘ C) := sorry
 
 lemma area_cons_smul
-{E : submodule ℝ V}
 {K : convex_body V}
 {C : multiset (convex_body V)} {c : nnreal}
-(hC : is_area_coll (K ::ₘ C) E) :
+(hC : is_area_coll (K ::ₘ C)) :
 area ((c • K) ::ₘ C) = c • area (K ::ₘ C) := sorry
 
 lemma area_continuous
-{E : submodule ℝ V}
 (C : multiset (convex_body V))
 (C1 : ℕ → convex_body V)
 (C1lim : convex_body V)
-(hC : ∀ n : ℕ, is_area_coll (C1 n ::ₘ C) E)
+(hC : ∀ n : ℕ, is_area_coll (C1 n ::ₘ C))
 (ht : filter.tendsto
   C1
   filter.at_top
@@ -174,8 +168,8 @@ normal_face K.val u.val
 lemma area_determined_by_τ_add
 {C : multiset (convex_body V)}
 {K L : convex_body V}
-(hC : is_area_coll (K ::ₘ C) ⊤)
-(hD : is_area_coll (L ::ₘ C) ⊤)
+(hC : is_area_coll (K ::ₘ C))
+(hD : is_area_coll (L ::ₘ C))
 {U : set (metric.sphere (0 : V) 1)}
 (hU : measurable_set U)
 (h : ∀ M : convex_body V, τ (K + M) U = τ (L + M) U) :
@@ -185,27 +179,11 @@ lemma is_area_coll_cons_of_head_subset
 {C : multiset (convex_body V)} {K L : convex_body V}
 {E : submodule ℝ V}
 (CD : K.val ⊆ L.val)
-(h : is_area_coll (L ::ₘ C) E) :
-is_area_coll (K ::ₘ C) E :=
+(h : is_area_coll (L ::ₘ C)) :
+is_area_coll (K ::ₘ C) :=
 begin
-  split,
-  {
-    convert h.1 using 1,
-    simp only [multiset.card_cons],
-  },
-  {
-    intros M hM,
-    rw [multiset.mem_cons] at hM,
-    rcases hM with rfl | hM,
-    {
-      simp only [convex_body_subset],
-      refine subset_trans CD _,
-      exact h.2 L (multiset.mem_cons_self _ _),
-    },
-    {
-      exact h.2 M (multiset.mem_cons_of_mem hM),
-    },
-  },
+  simp only [is_area_coll, multiset.card_cons] at h ⊢,
+  exact h,
 end
 
 end bm

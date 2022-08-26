@@ -54,3 +54,17 @@ begin
     apply finset.nodup,
   }
 end
+
+
+lemma ex_finset_argmax {α : Type} (f : α → ℝ) {s : finset α} (hs : s.nonempty) :
+∃ a ∈ s, ∀ b ∈ s, f a ≥ f b :=
+begin
+  have hsval : s.val ≠ 0,
+  {
+    intro h,
+    rcases hs with ⟨x, hx⟩,
+    simpa only [finset.mem_def, h] using hx,
+  },
+  rcases ex_multiset_argmax f hsval with ⟨a, ha, hp⟩,
+  exact ⟨a, ha, hp⟩,
+end

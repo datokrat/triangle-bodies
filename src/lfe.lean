@@ -329,8 +329,8 @@ end -/
 lemma area_determined_by_τ
 {C : multiset (convex_body V)}
 {K L : convex_body V}
-(hC : bm.is_area_coll (K ::ₘ C) ⊤)
-(hD : bm.is_area_coll (L ::ₘ C) ⊤)
+(hC : bm.is_area_coll (K ::ₘ C))
+(hD : bm.is_area_coll (L ::ₘ C))
 {U : set (metric.sphere (0 : V) 1)}
 (hU : measurable_set U)
 (h : bm.τ K U = bm.τ L U) :
@@ -354,45 +354,30 @@ end
 lemma is_area_coll_smul_cons
 {K : convex_body V}
 {C : multiset (convex_body V)}
-{E : submodule ℝ V}
-(h : bm.is_area_coll (K ::ₘ C) E)
+(h : bm.is_area_coll (K ::ₘ C))
 (c : nnreal) :
-bm.is_area_coll (c • K ::ₘ C) E :=
+bm.is_area_coll (c • K ::ₘ C) :=
 begin
-  simp only [bm.is_area_coll, multiset.card_cons, multiset.all_cons] at h ⊢,
-  obtain ⟨h₁, h₂, h₃⟩ := h,
-  refine ⟨h₁, _, h₃⟩,
-  rintro x ⟨x, hx, rfl⟩,
-  replace hx := h₂ hx,
-  apply submodule.smul_mem,
-  exact hx,
+  simp only [bm.is_area_coll, multiset.card_cons] at h ⊢,
+  exact h,
 end
 
 lemma is_area_coll_add_singleton_cons
 {K : convex_body V} {x : V}
 {C : multiset (convex_body V)}
-{E : submodule ℝ V}
-(xE : x ∈ E)
-(h : bm.is_area_coll (K ::ₘ C) E) :
-bm.is_area_coll ((K + {x}) ::ₘ C) E :=
+(h : bm.is_area_coll (K ::ₘ C)) :
+bm.is_area_coll ((K + {x}) ::ₘ C) :=
 begin
-  simp only [bm.is_area_coll, multiset.card_cons, multiset.all_cons] at h ⊢,
-  obtain ⟨h₁, h₂, h₃⟩ := h,
-  refine ⟨h₁, _, h₃⟩,
-  rintro - ⟨k, y, hk, hy, rfl⟩,
-  simp only [subtype.val_eq_coe, convex_body.coe_singleton, set.mem_singleton_iff] at hy,
-  obtain rfl := hy,
-  apply submodule.add_mem,
-  exact h₂ hk,
-  exact xE,
+  simp only [bm.is_area_coll, multiset.card_cons] at h ⊢,
+  exact h,
 end
 
 lemma area_pos_iff_of_lfe_aux
 {P Q : polytope V} {U : set (metric.sphere (0 : V) 1)}
 {Ks : multiset (convex_body V)}
 (hPQ : lfe U P Q)
-(ac₁ : bm.is_area_coll (convex_body_of_polytope P ::ₘ Ks) ⊤)
-(ac₂ : bm.is_area_coll (convex_body_of_polytope Q ::ₘ Ks) ⊤)
+(ac₁ : bm.is_area_coll (convex_body_of_polytope P ::ₘ Ks))
+(ac₂ : bm.is_area_coll (convex_body_of_polytope Q ::ₘ Ks))
 (hU₁ : measurable_set U) :
 ∃ c : nnreal, 0 < c ∧
 bm.area (convex_body_of_polytope Q ::ₘ Ks) U =
@@ -409,7 +394,7 @@ begin
     apply area_determined_by_τ,
     {exact ac₂},
     {
-      apply is_area_coll_add_singleton_cons submodule.mem_top,
+      apply is_area_coll_add_singleton_cons,
       apply is_area_coll_smul_cons,
       exact ac₁,
     },
@@ -422,7 +407,7 @@ begin
   },
   convert this using 1,
   simp only [P'],
-  rw [bm.area_cons_translate submodule.mem_top,
+  rw [bm.area_cons_translate,
       bm.area_cons_smul],
   {
     simp only [measure_theory.finite_measure.coe_fn_smul_apply],
@@ -440,12 +425,9 @@ end
 @[simp]
 lemma is_area_coll_top
 (C : multiset (convex_body V)) :
-bm.is_area_coll C ⊤ ↔ dim V = C.card + 1 :=
+bm.is_area_coll C ↔ dim V = C.card + 1 :=
 begin
-  simp only [bm.is_area_coll, dim_finrank, finrank_top, and_iff_left_iff_imp],
-  rintro -,
-  intros K hK x xK,
-  simp only [submodule.top_coe],
+  simp only [bm.is_area_coll],
 end
 
 lemma area_pos_iff_of_lfe
@@ -544,18 +526,10 @@ begin
       exact set.mem_image_of_mem _ hS,
     },
   },
-  {exact ⊤},
   {
     intro n,
     simp only [bm.is_area_coll],
-    split,
-    {
-      simp only [dim_finrank, finrank_top, multiset.card_cons, add_assoc] at hdim ⊢,
-      exact hdim,
-    },
-    {
-      intros K hK,
-      simp only [convex_body_subset, submodule.top_coe, set.subset_univ],
-    },
+    simp only [dim_finrank, finrank_top, multiset.card_cons, add_assoc] at hdim ⊢,
+    exact hdim,
   },
 end

@@ -79,19 +79,6 @@ begin
   exact metric.diam_nonneg,
 end
 
-lemma ex_finset_argmax {α : Type} (f : α → ℝ) {s : finset α} (hs : s.nonempty) :
-∃ a ∈ s, ∀ b ∈ s, f a ≥ f b :=
-begin
-  have hsval : s.val ≠ 0,
-  {
-    intro h,
-    rcases hs with ⟨x, hx⟩,
-    simpa only [finset.mem_def, h] using hx,
-  },
-  rcases ex_multiset_argmax f hsval with ⟨a, ha, hp⟩,
-  exact ⟨a, ha, hp⟩,
-end
-
 lemma generator_face_nonempty' {k : ℕ}
 (G : unbounded_microid_generator V k) (u : metric.sphere (0 : V) 1) :
 (generator_face' G u).nonempty :=
@@ -451,30 +438,6 @@ begin
   apply anglett_norm_iff.mp,
   apply anglett_chop,
   exact h,
-end
-
-lemma dist_inner_inner
-(v₁ v₂ w₁ w₂ : V) :
-⟪v₁, w₁⟫_ℝ ≤ ⟪v₂, w₂⟫_ℝ + (∥v₂ - v₁∥ * ∥w₁∥ + ∥v₂∥ * ∥w₂ - w₁∥) :=
-begin
-  conv {
-    to_lhs,
-    rw [←add_sub_cancel'_right v₂ v₁],
-    simp only [inner_add_left],
-  },
-  conv {
-    to_lhs,
-    congr,
-    {
-      rw [←add_sub_cancel'_right w₂ w₁],
-      simp only [inner_add_right],
-    },
-  },
-  simp only [add_assoc],
-  refine add_le_add_left _ _,
-  refine le_trans (add_le_add (real_inner_le_norm _ _) (real_inner_le_norm _ _)) _,
-  simp only [←dist_eq_norm],
-  rw [dist_comm v₁ v₂, dist_comm w₁ w₂, add_comm],
 end
 
 def is_facial_gap {k : ℕ}

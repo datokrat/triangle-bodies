@@ -16,6 +16,10 @@ local attribute [instance] prop_decidable
 variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
 
+instance submodule.complete_space (E : submodule ℝ V) : complete_space E :=
+is_complete.complete_space_coe (submodule.complete_of_finite_dimensional E)
+
+
 noncomputable def vector_orth (u : V) : submodule ℝ V :=
 (submodule.span ℝ ({u} : set V))ᗮ
 
@@ -369,8 +373,6 @@ end
 
 def semicritical (C : multiset (set V)) :=
   ∀ τ : multiset (set V), τ ≤ C → common_dimension τ ≥ τ.card
-
-instance pauls_completeness_foo (E : submodule ℝ V) : complete_space E := sorry
 
 def project_set (E : submodule ℝ V): set V → set E :=
 λ A, orthogonal_projection E '' A
@@ -1108,9 +1110,8 @@ begin
 end
 
 noncomputable def of_dual' (f : V →ₗ[ℝ] ℝ) : V :=
-(inner_product_space.to_dual ℝ V).symm ⟨f, sorry⟩
-
-
+(inner_product_space.to_dual ℝ V).symm
+⟨f, linear_map.continuous_of_finite_dimensional f⟩
 
 lemma coe_ball_submodule {E : submodule ℝ V} (u : E) (ε : ℝ) :
 coe '' metric.ball u ε = metric.ball (u : V) ε ∩ E :=
@@ -1146,4 +1147,28 @@ begin
     simpa only [coe_ball_submodule, submodule.coe_mk] using h,
   },
   exact span_top_of_ball_subset εpos (subset_refl _),
+end
+
+lemma dist_inner_inner
+(v₁ v₂ w₁ w₂ : V) :
+⟪v₁, w₁⟫_ℝ ≤ ⟪v₂, w₂⟫_ℝ + (∥v₂ - v₁∥ * ∥w₁∥ + ∥v₂∥ * ∥w₂ - w₁∥) :=
+begin
+  conv {
+    to_lhs,
+    rw [←add_sub_cancel'_right v₂ v₁],
+    simp only [inner_add_left],
+  },
+  conv {
+    to_lhs,
+    congr,
+    {
+      rw [←add_sub_cancel'_right w₂ w₁],
+      simp only [inner_add_right],
+    },
+  },
+  simp only [add_assoc],
+  refine add_le_add_left _ _,
+  refine le_trans (add_le_add (real_inner_le_norm _ _) (real_inner_le_norm _ _)) _,
+  simp only [←dist_eq_norm],
+  rw [dist_comm v₁ v₂, dist_comm w₁ w₂, add_comm],
 end

@@ -258,20 +258,6 @@ begin
   },
 end
 
-lemma closed_iff_segments_closable {A : set V}
-(Acv : convex ℝ A):
-is_closed A ↔ ∀ x y : V, open_segment ℝ x y ⊆ A → segment ℝ x y ⊆ A :=
-begin
-  split,
-  {
-    exact segments_closable_of_closed,
-  },
-  {
-    intro h,
-    admit,
-  },
-end
-
 lemma open_segment_nonempty (x y : V) :
 (open_segment ℝ x y).nonempty :=
 begin

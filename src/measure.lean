@@ -32,14 +32,6 @@ lemma msupport_subset_of_tendsto
 msupport lμ ⊆ closure (⋃ (n : ℕ), msupport (μ n)) :=
 sorry
 
--- e.g., Prokhorov's metrization, as α is separable
-lemma measure_tendsto_nhds_unique
-{μ : ℕ → measure_theory.finite_measure α}
-{lμ₁ lμ₂ : measure_theory.finite_measure α}
-(h₁ : filter.tendsto μ filter.at_top (𝓝 lμ₁))
-(h₂ : filter.tendsto μ filter.at_top (𝓝 lμ₂)) :
-lμ₁ = lμ₂ := sorry
-
 instance finite_measure_val {α : Type} [measurable_space α] {μ : measure_theory.finite_measure α} :
 measure_theory.is_finite_measure μ.val := μ.property
 

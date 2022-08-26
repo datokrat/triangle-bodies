@@ -14,8 +14,8 @@ def msupport
 (μ : measure_theory.finite_measure α) : set α :=
 { x : α | ∀ U : set α, x ∈ U → is_open U → μ U > 0 }
 
-lemma closed_msupport (μ : measure_theory.finite_measure α) :
-is_closed (msupport μ) := sorry
+/- lemma closed_msupport (μ : measure_theory.finite_measure α) :
+is_closed (msupport μ) := sorry -/
 
 -- needs second-countability
 lemma integral_eq_of_eq_on_msupport {f g : α → ℝ}

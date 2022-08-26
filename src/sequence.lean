@@ -59,7 +59,22 @@ lemma subseq_forall_of_frequently'
 (h : ∃ᶠ n in filter.at_top, p (s n)) :
 ∃ φ : ℕ → ℕ,
 strict_mono φ ∧
-∀ n : ℕ, p ((s ∘ φ) n) := sorry
+∀ n : ℕ, p ((s ∘ φ) n) :=
+begin
+  have : ∀ n : ℕ, ∃ m : ℕ, m ≥ n ∧ p (s m),
+  {
+    intro n,
+    rw [filter.frequently_at_top] at h,
+    obtain ⟨m, h₁, h₂⟩ := h n,
+    refine ⟨m, h₁, h₂⟩,
+  },
+  choose φ₁ h₁ using this,
+  obtain ⟨φ₂, h₂₁, h₂₂⟩ := filter.strict_mono_subseq_of_id_le (λ n, (h₁ n).1),
+  refine ⟨φ₁ ∘ φ₂, h₂₂, _⟩,
+  intro n,
+  simp only [function.comp_app],
+  exact (h₁ (φ₂ n)).2,
+end
 
 /- lemma frequently_subseq
 {α : Type}

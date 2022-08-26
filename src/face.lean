@@ -509,7 +509,7 @@ begin
   exact this _ is_closed_Iic,
 end
 
-lemma exists_supporting_halfspace' {A : set V}
+/- lemma exists_supporting_halfspace' {A : set V}
 (Acv : convex ℝ A) (Atop : vector_span ℝ A = ⊤) {x : V}
 (h : x ∈ frontier A ∩ A) :
 ∃ u : V, u ≠ 0 ∧ A ⊆ { v : V | ⟪v, u⟫_ℝ ≤ ⟪x, u⟫_ℝ } :=
@@ -539,10 +539,10 @@ begin
     exact le_of_lt (hf a ha),
     apply_instance,
   },
-end
+end -/
 
 
-lemma exists_supporting_halfspace'' {A : set V}
+/- lemma exists_supporting_halfspace'' {A : set V}
 (Acv : convex ℝ A) (Aro : is_relopen A) {x : V}
 (xA : x ∈ relbd A) :
 ∃ u : V, (∀ y : V, y ∈ A → ⟪x, u⟫_ℝ ≥ ⟪y, u⟫_ℝ) ∧ normal_face A u ⊂ A
@@ -551,14 +551,14 @@ begin
   rw [relopen_iff_exists_open_inter_aspan] at Aro,
   obtain ⟨U, hU₁, hU₂⟩ := Aro,
   admit,
-end
+end -/
 
 lemma exists_supporting_halfspace {A : set V}
 (Acv : convex ℝ A) {x : V}
 (h : x ∈ relbd A ∩ A) :
 ∃ u : V, x ∈ normal_face A u ∧ normal_face A u ⊂ A
-:=
-begin
+:= sorry
+/- begin
   let E := vector_span ℝ A,
   let A' : set E := coe ⁻¹' (A - {x}),
   have A'cv : convex ℝ A',
@@ -627,7 +627,7 @@ begin
     admit, admit,
   },
   admit,
-end
+end -/
 
 abbreviation halfspace (u : V) (c : ℝ) := {v : V | ⟪v, u⟫_ℝ ≤ c}
 abbreviation hyperplane (u : V) (c : ℝ) := {v : V | ⟪v, u⟫_ℝ = c}

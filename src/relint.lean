@@ -753,17 +753,17 @@ end
 lemma relint_relopen {A : set V} (hA : is_relopen A) :
 relint A = A := sorry
 
-lemma interior_convex {A : set V} (Acv : convex ℝ A) :
-convex ℝ (interior A) := sorry
+/- lemma interior_convex {A : set V} (Acv : convex ℝ A) :
+convex ℝ (interior A) := sorry -/
 
 /- lemma relint_convex {A : set V} (Acv : convex ℝ A) :
 convex ℝ (relint A) := sorry -/
 
-lemma cl_relint_eq_cl {A : set V} (Acv : convex ℝ A) :
-closure (relint A) = closure A := sorry
+/- lemma cl_relint_eq_cl {A : set V} (Acv : convex ℝ A) :
+closure (relint A) = closure A := sorry -/
 
-lemma relint_nonempty {A : set V} (Acv : convex ℝ A)
-(Ane : A.nonempty) : (relint A).nonempty := sorry
+/- lemma relint_nonempty {A : set V} (Acv : convex ℝ A)
+(Ane : A.nonempty) : (relint A).nonempty := sorry -/
 
 lemma exists_mem_open_segment_of_mem_relint {A : set V} {x y : V}
 (xA : x ∈ relint A) (yA : y ∈ affine_span ℝ A) :
@@ -807,7 +807,7 @@ begin
   exact subset_affine_span ℝ A xA,
 end
 
-def make_relopen_open (A : set V) : set V :=
+/- def make_relopen_open (A : set V) : set V :=
 --{x : V | ∃ a : V, a ∈ A ∧ }
 A + (vector_span ℝ A)ᗮ
 
@@ -926,15 +926,15 @@ begin
       exact metric.mem_ball_self εpos,
     },
   },
-end
+end -/
 
-lemma relopen_iff_open_preimage
+/- lemma relopen_iff_open_preimage
 {A : set V} :
 is_relopen A ↔ is_open (make_relopen_open A) :=
 begin
   rw [←relint_eq_iff_relopen],
   admit,
-end
+end -/
 
 
 lemma closed_iff_segments_closable {A : set V}

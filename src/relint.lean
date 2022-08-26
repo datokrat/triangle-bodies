@@ -768,3 +768,170 @@ lemma relint_nonempty {A : set V} (Acv : convex ℝ A)
 lemma exists_mem_open_segment_of_mem_relint {A : set V} {x y : V}
 (xA : x ∈ relint A) (yA : y ∈ affine_span ℝ A) :
 ∃ z : V, z ∈ A ∧ x ∈ open_segment ℝ y z := sorry
+
+lemma relint_eq_iff_relopen {A : set V} :
+relint A = A ↔ is_relopen A :=
+begin
+  simp only [is_relopen, relint],
+  rw [←interior_eq_iff_open],
+  split,
+  {
+    intro h,
+    conv {
+      to_rhs,
+      congr, skip,
+      rw [←h],
+    },
+    rw [set.preimage_image_eq],
+    exact subtype.coe_injective,
+  },
+  {
+    intro h,
+    rw [h, set.image_preimage_eq_iff, subtype.range_coe],
+    exact subset_affine_span ℝ A,
+  },
+end
+
+lemma relopen_iff_exists_open_inter_aspan
+{A : set V} :
+is_relopen A ↔ ∃ B : set V, is_open B ∧ B ∩ affine_span ℝ A = A :=
+begin
+  simp only [is_relopen, is_open_induced_iff],
+  apply exists_congr,
+  simp only [and.congr_right_iff],
+  intros B hB,
+  simp only [←subtype.coe_injective.image_injective.eq_iff, subtype.image_preimage_coe],
+  congr', -- Why does this work while congr doesn't?
+  ext, simp only [set.mem_inter_eq, and_iff_left_iff_imp],
+  intro xA,
+  exact subset_affine_span ℝ A xA,
+end
+
+def make_relopen_open (A : set V) : set V :=
+--{x : V | ∃ a : V, a ∈ A ∧ }
+A + (vector_span ℝ A)ᗮ
+
+lemma interior_make_relopen_open (A : set V) :
+interior (make_relopen_open A) = make_relopen_open (relint A) :=
+begin
+  ext,
+  simp only [mem_interior, make_relopen_open, set.mem_add, exists_prop, set_like.mem_coe, exists_and_distrib_left, vector_span_def, exists_prop],
+  split,
+  {
+    rintro ⟨t, tss, topen, xt⟩,
+    obtain ⟨y, z, yA, hz, rfl⟩ := tss xt,
+    refine ⟨y, _, z, _, rfl⟩,
+    {
+      rw [mem_relint'],
+      let t' := t + (vector_span ℝ A)ᗮ, --{x : V | ∃ y : V, y ∈ (vector_span ℝ A)ᗮ ∧ x + y ∈ t},
+      refine ⟨subset_affine_span ℝ _ yA, t', _, _, _⟩,
+      {
+        have tss' : t' ⊆ A + (vector_span ℝ A)ᗮ,
+        {
+          simp only [t'],
+          refine subset_trans (set.add_subset_add_right tss) _,
+          rw [add_assoc],
+          rintro - ⟨a, -, ha, ⟨b, c, hb, hc, rfl⟩, rfl⟩,
+          refine ⟨a, b + c, ha, _, rfl⟩,
+          rw [set_like.mem_coe],
+          exact submodule.add_mem _ hb hc,
+        },
+        rintro w ⟨w₁, w₂⟩,
+        obtain ⟨a, b, ha, hb, rfl⟩ := tss' w₁,
+        have : b ∈ vector_span ℝ A,
+        {
+          rw [←add_sub_cancel' a b],
+          apply vsub_mem_vector_span_of_mem_span_points_of_mem_span_points ℝ,
+          exact w₂,
+          exact subset_affine_span ℝ _ ha,
+        },
+        rw [set_like.mem_coe] at hb,
+        replace hb := hb _ this,
+        rw [inner_self_eq_zero] at hb,
+        rw [hb, add_zero],
+        exact ha,
+      },
+      {
+        rw [metric.is_open_iff] at topen ⊢,
+        rintro x ⟨x₁, x₂, hx₁, hx₂, rfl⟩,
+        obtain ⟨ε, εpos, εball⟩ := topen x₁ hx₁,
+        refine ⟨ε, εpos, _⟩,
+        rw [←ball_add_singleton],
+        rintro y ⟨y₁, y₂, hy₁, hy₂, rfl⟩,
+        rw [set.mem_singleton_iff] at hy₂,
+        obtain rfl := hy₂,
+        exact ⟨y₁, y₂, εball hy₁, hx₂, rfl⟩,
+      },
+      {
+        refine ⟨y + z, -z, xt, _, _⟩,
+        {
+          rw [set_like.mem_coe] at hz ⊢,
+          exact submodule.neg_mem _ hz,
+        },
+        {
+          simp only [add_neg_cancel_right],
+        },
+      },
+    },
+    {
+      simp only [mem_orthogonal_span, set_like.mem_coe] at hz ⊢,
+      intros u hu,
+      apply hz u,
+      obtain ⟨u₁, u₂, hu₁, hu₂, rfl⟩ := hu,
+      exact ⟨u₁, u₂, relint_subset_self _ hu₁, relint_subset_self _ hu₂, rfl⟩,
+    },
+  },
+  {
+    rintro ⟨y, hy, z, hz, rfl⟩,
+    rw [mem_relint] at hy,
+    obtain ⟨ε, εpos, εball⟩ := hy.2,
+    refine ⟨metric.ball (y + z) ε, _, _, _⟩,
+    {
+      intros w hw,
+      let v := orthogonal_projection (vector_span ℝ A) (w - (y + z)),
+      have : ∥v∥ < ε,
+      {
+        refine lt_of_le_of_lt _ (mem_ball_iff_norm.mp hw),
+        refine le_trans (continuous_linear_map.le_op_norm (orthogonal_projection (vector_span ℝ A)) (w - (y + z))) _,
+        refine le_trans
+        (mul_le_mul_of_nonneg_right
+        (orthogonal_projection_norm_le _) (norm_nonneg _)) _,
+        rw [one_mul],
+      },
+      have hz': z ∈ (vector_span ℝ A)ᗮ,
+      {
+        admit,
+      },
+      have : ((w - (y + z)) - v) + z ∈ (vector_span ℝ A)ᗮ,
+      {
+        refine submodule.add_mem _ _ hz',
+        exact sub_orthogonal_projection_mem_orthogonal _,
+      },
+      rw [←sub_sub, sub_add_eq_add_sub, sub_add_cancel, sub_sub] at this,
+      refine ⟨y + v, w - (y + v), _, _, _⟩,
+      {
+        admit,
+      },
+      {
+        exact this,
+      },
+      {
+        simp only [add_sub_cancel'_right],
+      },
+    },
+    {
+      exact metric.is_open_ball,
+    },
+    {
+      exact metric.mem_ball_self εpos,
+    },
+  },
+end
+
+lemma relopen_iff_open_preimage
+{A : set V} :
+is_relopen A ↔ is_open (make_relopen_open A) :=
+begin
+  rw [←relint_eq_iff_relopen],
+  admit,
+end

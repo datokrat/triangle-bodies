@@ -13,6 +13,10 @@ import linalg
 open_locale pointwise
 open_locale topological_space
 
+-- needed to get decidable_eq for sets!
+open classical
+local attribute [instance] prop_decidable
+
 variables {V: Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
 
 lemma convex_sum {A B : set V}
@@ -277,4 +281,72 @@ begin
   {positivity},
   {positivity},
   {ring},
+end
+
+lemma tmp
+{A : set V} {B : finset V}
+(Ao : is_open A) (BA : ↑B ⊆ A) :
+∃ ε : ℝ, ε > 0 ∧ ∀ x ∈ B, metric.ball x ε ⊆ A :=
+begin
+  induction B using finset.induction with b B bB ih,
+  {
+    simp only [gt_iff_lt, finset.not_mem_empty, is_empty.forall_iff, forall_const, and_true],
+    exact ⟨1, zero_lt_one⟩,
+  },
+  {
+    simp only [gt_iff_lt, finset.mem_insert, forall_eq_or_imp],
+    simp only [set.insert_subset, finset.coe_insert] at BA,
+    rw [metric.is_open_iff] at Ao,
+    obtain ⟨ε, εpos, εball⟩ := Ao b BA.1,
+    obtain ⟨δ, δpos, δball⟩ := ih BA.2,
+    refine ⟨min ε δ, _, _, _⟩,
+    {
+      simp only [lt_min_iff],
+      exact ⟨εpos, δpos⟩,
+    },
+    {
+      exact subset_trans (metric.ball_subset_ball (min_le_left _ _)) εball,
+    },
+    {
+      intros x xB,
+      exact subset_trans (metric.ball_subset_ball (min_le_right _ _)) (δball x xB),
+    },
+  },
+end
+
+lemma is_open_convex_hull
+{A : set V} (Ao : is_open A) :
+is_open (convex_hull ℝ A) :=
+begin
+  rw [metric.is_open_iff],
+  intros x hx,
+  rw [convex_hull_eq, set.mem_set_of] at hx,
+  obtain ⟨ι, t, w, z, h₁, h₂, h₃, h₄⟩ := hx,
+  let f := finset.image z t,
+  have hf : ↑f ⊆ A,
+  {
+    intros y hy,
+    simp only [finset.coe_image, set.mem_image, finset.mem_coe] at hy,
+    obtain ⟨v, hv, rfl⟩ := hy,
+    exact h₃ v hv,
+  },
+  obtain ⟨ε, εpos, εball⟩ := tmp Ao hf,
+  refine ⟨ε, εpos, _⟩,
+  intros y hy,
+  suffices hs : x ∈ convex_hull ℝ (A + {x - y}),
+  {
+    rw [convex_hull_add] at hs,
+    simp only [convex_hull_singleton, set.add_singleton, set.image_add_right, neg_sub, set.mem_preimage, add_sub_cancel'_right] at hs,
+    exact hs,
+  },
+  have h₃' : ∀ i : ι, i ∈ t → z i ∈ A + {x - y},
+  {
+    intros i it,
+    simp only [set.add_singleton, set.image_add_right, neg_sub, set.mem_preimage],
+    simp only [finset.mem_image, forall_exists_index, forall_apply_eq_imp_iff₂] at εball,
+    apply εball i it,
+    simpa only [mem_ball_iff_norm, add_sub_cancel'] using hy,
+  },
+  rw [convex_hull_eq, set.mem_set_of],
+  refine ⟨ι, t, w, z, h₁, h₂, h₃', h₄⟩,
 end

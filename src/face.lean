@@ -541,6 +541,18 @@ begin
   },
 end
 
+
+lemma exists_supporting_halfspace'' {A : set V}
+(Acv : convex ℝ A) (Aro : is_relopen A) {x : V}
+(xA : x ∈ relbd A) :
+∃ u : V, (∀ y : V, y ∈ A → ⟪x, u⟫_ℝ ≥ ⟪y, u⟫_ℝ) ∧ normal_face A u ⊂ A
+:=
+begin
+  rw [relopen_iff_exists_open_inter_aspan] at Aro,
+  obtain ⟨U, hU₁, hU₂⟩ := Aro,
+  admit,
+end
+
 lemma exists_supporting_halfspace {A : set V}
 (Acv : convex ℝ A) {x : V}
 (h : x ∈ relbd A ∩ A) :
@@ -568,52 +580,51 @@ begin
   },
   have A'top : vector_span ℝ A' = ⊤,
   {
-    rw [submodule.eq_top_iff'],
-    simp only [←set_like.mem_coe],
-    suffices hs : (set.univ : set E) ⊆ vector_span ℝ A',
+    have Ane : (A - {x}).nonempty := ⟨0, ⟨x, x, h.2, set.mem_singleton x, sub_self x⟩⟩,
+    have : A - {x} ⊆ (vector_span ℝ A).subtype.range,
     {
-      rintro e,
-      exact hs (set.mem_univ _),
+      rw [submodule.range_subtype],
+      simp only [vector_span],
+      refine subset_trans _ submodule.subset_span,
+      simp only [set.sub_singleton, set.image_subset_iff],
+      intros a ha,
+      refine ⟨a, x, ha, h.2, rfl⟩,
     },
-    --simp only [E] at eE,
-    --simp only [vector_span] at eE ⊢,
-    suffices hs' : ∀ e : V, e ∈ vector_span ℝ A → ∀ h : e ∈ vector_span ℝ A, (⟨e, h⟩ : vector_span ℝ A) ∈ vector_span ℝ A',
+    have hh : submodule.span ℝ (A - {x}) = vector_span ℝ A,
     {
-      rintro ⟨e, eE⟩ -,
-      exact hs' e eE eE,
-    },
-    intros e eE,
-    apply submodule.span_induction eE,
-    {
-      rintro - ⟨a, b, ha, hb, rfl⟩ eE',
-      apply submodule.subset_span,
-      refine ⟨⟨a - x, _⟩, ⟨b - x, _⟩, _, _, _⟩,
+      simp only [vector_span],
+      apply le_antisymm,
       {
-        apply submodule.subset_span,
-        exact ⟨a, x, ha, h.2, rfl⟩,
+        apply submodule.span_mono,
+        rintro - ⟨a, y, ha, hy, rfl⟩,
+        obtain rfl := set.eq_of_mem_singleton hy,
+        exact ⟨a, y, ha, h.2, rfl⟩,
       },
       {
-        apply submodule.subset_span,
-        exact ⟨b, x, hb, h.2, rfl⟩,
-      },
-      any_goals {
-        simp only [set.mem_preimage, subtype.coe_mk, set.sub_singleton, set.mem_image, sub_left_inj, exists_eq_right],
-        assumption,
-      },
-      {
-        apply submodule.injective_subtype,
-        simp only [vsub_eq_sub, submodule.coe_subtype, add_subgroup_class.coe_sub, subtype.coe_mk, sub_sub_sub_cancel_right],
+        rw [submodule.span_le],
+        rintro - ⟨a, b, ha, hb, rfl⟩,
+        rw [set_like.mem_coe],
+        have : (a - x) - (b - x) ∈ submodule.span ℝ (A - {x}),
+        {
+          refine submodule.sub_mem _ _ _,
+          {exact submodule.subset_span ⟨a, x, ha, set.mem_singleton x, rfl⟩},
+          {exact submodule.subset_span ⟨b, x, hb, set.mem_singleton x, rfl⟩},
+        },
+        simp only [sub_sub_sub_cancel_right] at this,
+        exact this,
       },
     },
-    {
-      simp only [submodule.zero_mem, forall_true_left],
-      exact submodule.zero_mem _,
-    },
-    {
-      intros y z hy hz h,
-      admit,
-    },
+    have := submodule.span_preimage_eq Ane this,
+    rw [hh] at this,
+    convert this using 1,
     admit,
+    admit,
+  },
+  have A'f : (0 : E) ∈ frontier A',
+  {
+    simp only [relbd, relint] at h,
+    refine ⟨_, _⟩,
+    admit, admit,
   },
   admit,
 end

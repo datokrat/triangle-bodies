@@ -51,7 +51,7 @@ lfe U₁ P Q :=
 begin
   obtain ⟨x, c, cpos, hxc⟩ := hPQ,
   refine ⟨x, c, cpos, _⟩,
-  simp only [τ_mono hU, hxc],
+  simp only [bm.τ_mono hU, hxc],
   rw [add_comm],
   simp only [face_translate, face_smul cpos],
   rw [add_comm],
@@ -162,7 +162,7 @@ bm.area (K ::ₘ C) U = bm.area (L ::ₘ C) U :=
 begin
   apply bm.area_determined_by_τ_add hC hD hU,
   intro M,
-  exact τ_add_right_eq h,
+  exact bm.τ_add_right_eq h,
 end
 
 -- MOVETO multiset.lean
@@ -224,7 +224,7 @@ begin
     },
     exact hU₁,
     {
-      rw [τ_translate, τ_smul, add_comm],
+      rw [bm.τ_translate, bm.τ_smul, add_comm],
       rw [hcx],
       simp only [c', nnreal.smul_def, real.coe_to_nnreal _ (le_of_lt cpos)],
     },

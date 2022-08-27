@@ -2,6 +2,7 @@ import convex linalg
   analysis.normed_space.hahn_banach.separation
 
 open_locale pointwise
+open_locale topological_space
 
 variables {V : Type} [inner_product_space ℝ V]
 [finite_dimensional ℝ V]
@@ -750,25 +751,6 @@ begin
   },
 end
 
-lemma relint_relopen {A : set V} (hA : is_relopen A) :
-relint A = A := sorry
-
-/- lemma interior_convex {A : set V} (Acv : convex ℝ A) :
-convex ℝ (interior A) := sorry -/
-
-/- lemma relint_convex {A : set V} (Acv : convex ℝ A) :
-convex ℝ (relint A) := sorry -/
-
-/- lemma cl_relint_eq_cl {A : set V} (Acv : convex ℝ A) :
-closure (relint A) = closure A := sorry -/
-
-/- lemma relint_nonempty {A : set V} (Acv : convex ℝ A)
-(Ane : A.nonempty) : (relint A).nonempty := sorry -/
-
-lemma exists_mem_open_segment_of_mem_relint {A : set V} {x y : V}
-(xA : x ∈ relint A) (yA : y ∈ affine_span ℝ A) :
-∃ z : V, z ∈ A ∧ x ∈ open_segment ℝ y z := sorry
-
 lemma relint_eq_iff_relopen {A : set V} :
 relint A = A ↔ is_relopen A :=
 begin
@@ -789,6 +771,84 @@ begin
     intro h,
     rw [h, set.image_preimage_eq_iff, subtype.range_coe],
     exact subset_affine_span ℝ A,
+  },
+end
+
+lemma relint_relopen {A : set V} (hA : is_relopen A) :
+relint A = A := relint_eq_iff_relopen.mpr hA
+
+/- lemma interior_convex {A : set V} (Acv : convex ℝ A) :
+convex ℝ (interior A) := sorry -/
+
+/- lemma relint_convex {A : set V} (Acv : convex ℝ A) :
+convex ℝ (relint A) := sorry -/
+
+/- lemma cl_relint_eq_cl {A : set V} (Acv : convex ℝ A) :
+closure (relint A) = closure A := sorry -/
+
+lemma relint_nonempty {A : set V} (Acv : convex ℝ A)
+(Ane : A.nonempty) : (relint A).nonempty := sorry
+
+lemma exists_mem_open_segment_of_mem_relint {A : set V} {x y : V}
+(xA : x ∈ relint A) (yA : y ∈ affine_span ℝ A) :
+∃ z : V, z ∈ A ∧ x ∈ open_segment ℝ y z :=
+begin
+  rw [mem_relint'] at xA,
+  obtain ⟨xA, U, hU₁, hU₂⟩ := xA,
+  let f : ℝ → V := λ c, (1 + c) • x - c • y,
+  have fc : continuous f := by continuity,
+  have fz : f 0 = x,
+  {
+    simp only [f],
+    rw [add_zero, one_smul, zero_smul, sub_zero],
+  },
+  haveI : (𝓝[set.Ioo (0 : ℝ) 1] 0).ne_bot := left_nhds_within_Ioo_ne_bot zero_lt_one,
+  have mem_cl : (0 : ℝ) ∈ closure (set.Ioo (0 : ℝ) 1),
+  {
+    rw [closure_Ioo zero_ne_one],
+    exact set.left_mem_Icc.mpr zero_le_one,
+    all_goals {apply_instance},
+  },
+  rw [mem_closure_iff_seq_limit] at mem_cl,
+  obtain ⟨t, ht₁, ht₂⟩ := mem_cl,
+  have ftt : filter.tendsto (f ∘ t) filter.at_top (𝓝 (f 0)) :=
+  filter.tendsto.comp fc.continuous_at ht₂,
+  rw [fz, tendsto_at_top_nhds] at ftt,
+  obtain ⟨n, hn⟩ := ftt U hU₂.2 hU₂.1,
+  replace hn := hn n (le_refl n),
+  have : (f ∘ t) n ∈ affine_span ℝ A,
+  {
+    simp only [f, function.comp_app],
+    rw [add_smul, one_smul, add_sub_assoc, ←smul_sub, add_comm],
+    refine affine_subspace.vadd_mem_of_mem_direction _ xA,
+    {
+      refine submodule.smul_mem _ _ _,
+      refine affine_subspace.vsub_mem_direction xA yA,
+    },
+  },
+  refine ⟨_, hU₁ ⟨hn, this⟩, _⟩,
+  simp only [f, function.comp_app, mem_open_segment'],
+  have dpos : 0 < (1 + t n) := add_pos zero_lt_one (ht₁ n).1,
+  refine ⟨1 - (1 + t n)⁻¹, ⟨_, _⟩, _⟩,
+  {
+    simp only [sub_pos],
+    apply inv_lt_one,
+    rw [lt_add_iff_pos_right],
+    exact (ht₁ n).1,
+  },
+  {
+    rw [sub_lt_self_iff, inv_pos],
+    exact add_pos zero_lt_one (ht₁ n).1,
+  },
+  {
+    -- so tedious...
+    simp only [sub_sub_cancel, smul_sub],
+    rw [inv_smul_smul₀ (ne_of_gt dpos), sub_smul, smul_smul],
+    rw [←sub_smul, add_sub_left_comm, self_eq_add_right, ←sub_smul],
+    rw [smul_eq_zero],
+    nth_rewrite 0 [←inv_mul_cancel (ne_of_gt dpos)],
+    rw [sub_right_comm, ←mul_sub],
+    simp only [add_tsub_cancel_right, mul_one, sub_self, eq_self_iff_true, true_or],
   },
 end
 
@@ -936,6 +996,98 @@ begin
   admit,
 end -/
 
+lemma cl_subset_aspan (A : set V) :
+closure A ⊆ affine_span ℝ A :=
+begin
+  rw [is_closed.closure_subset_iff], rotate,
+  {apply affine_subspace.closed_of_finite_dimensional},
+  apply subset_affine_span,
+end
+
+lemma mem_open_segment_tendsto_left_of_tendsto_right {x y z : V}
+(hy : y ∈ open_segment ℝ x z)
+{t : ℕ → V}
+(ht : filter.tendsto t filter.at_top (𝓝 z))
+{E : affine_subspace ℝ V}
+(yE : y ∈ E)
+(zE : ∀ n, t n ∈ E) :
+∃ u : ℕ → V, filter.tendsto u filter.at_top (𝓝 x) ∧
+(∀ n : ℕ, y ∈ open_segment ℝ (u n) (t n)) ∧
+(∀ n : ℕ, u n ∈ E) :=
+begin
+  rw [mem_open_segment'] at hy,
+  obtain ⟨c, ⟨hc₁, hc₂⟩, hy⟩ := hy,
+  let f : V → V := λ z', c⁻¹ • (y - (1 - c) • z'),
+  have fc : continuous f := by continuity,
+  have fz : f z = x :=
+  by simp only [f, hy, smul_add, sub_smul, ne_of_gt hc₁, inv_smul_smul₀, ne.def, not_false_iff, add_sub_cancel],
+  refine ⟨λ n, f (t n), _, _, _⟩,
+  {
+    rw [←fz],
+    exact filter.tendsto.comp fc.continuous_at ht,
+  },
+  {
+    intro n,
+    rw [mem_open_segment'],
+    refine ⟨c, ⟨hc₁, hc₂⟩, _⟩,
+    simp only [ne_of_gt hc₁, smul_inv_smul₀, ne.def, not_false_iff, sub_add_cancel],
+  },
+  {
+    intro n,
+    simp only [f, smul_sub, sub_smul, one_smul, inv_smul_smul₀ (ne_of_gt hc₁)],
+    rw [←sub_add, ←smul_sub],
+    refine  affine_subspace.vadd_mem_of_mem_direction _ (zE n),
+    {
+      refine submodule.smul_mem _ _ _,
+      exact affine_subspace.vsub_mem_direction yE (zE n),
+    },
+  },
+end
+
+lemma open_segment_subset_affine_subspace {x y : V}
+{E : affine_subspace ℝ V} (xE : x ∈ E) (yE : y ∈ E) :
+open_segment ℝ x y ⊆ E :=
+begin
+  rintro z hz,
+  rw [mem_open_segment'] at hz,
+  obtain ⟨c, ⟨hc₁, hc₂⟩, rfl⟩ := hz,
+  rw [sub_smul, add_sub_left_comm, ←smul_sub, add_comm, one_smul],
+  refine affine_subspace.vadd_mem_of_mem_direction _ yE,
+  {
+    refine submodule.smul_mem _ _ _,
+    exact affine_subspace.vsub_mem_direction xE yE,
+  },
+end
+
+lemma open_segment_subset_of_mem_relint_of_mem_cl {A : set V}
+(Acv : convex ℝ A)
+{x y : V} (hx : x ∈ relint A) (hy : y ∈ closure A) :
+open_segment ℝ x y ⊆ A :=
+begin
+  rw [mem_relint'] at hx,
+  obtain ⟨U, hU₁, hU₂⟩ := hx.2,
+  intros a ha,
+  let ha' := ha,
+  rw [mem_open_segment'] at ha',
+  obtain ⟨c, ⟨hc₁, hc₂⟩, ha'⟩ := ha',
+  let hy' := hy,
+  rw [mem_closure_iff_seq_limit] at hy,
+  obtain ⟨t, ht₁, ht₂⟩ := hy,
+  have : a ∈ affine_span ℝ A,
+  {
+    refine open_segment_subset_affine_subspace hx.1 _ ha,
+    apply cl_subset_aspan,
+    exact hy,
+  },
+  have ht₁' := λ n, subset_affine_span ℝ _ (ht₁ n),
+  obtain ⟨u, hu₁, hu₂, hu₃⟩ := mem_open_segment_tendsto_left_of_tendsto_right ha ht₂ this ht₁',
+  rw [tendsto_at_top_nhds] at hu₁,
+  obtain ⟨n, hn⟩ := hu₁ U hU₂.2 hU₂.1,
+  replace hn := hn n (le_refl n),
+  replace hu₂ := hu₂ n,
+  rw [convex_iff_open_segment_subset] at Acv,
+  refine Acv (hU₁ ⟨hn, hu₃ n⟩) (ht₁ n) hu₂,
+end
 
 lemma closed_iff_segments_closable {A : set V}
 (Acv : convex ℝ A):
@@ -947,6 +1099,11 @@ begin
   },
   {
     intro h,
-    admit,
+    rw [←closure_eq_iff_is_closed],
+    refine subset_antisymm _ subset_closure,
+    intros z hz,
+    obtain ⟨x, hx⟩ := relint_nonempty Acv (closure_nonempty_iff.mp ⟨z, hz⟩),
+    have := h _ _ (open_segment_subset_of_mem_relint_of_mem_cl Acv hx hz),
+    exact this (right_mem_segment _ _ _),
   },
 end

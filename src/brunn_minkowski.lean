@@ -85,6 +85,7 @@ dim V = C.card + 1
 def is_almost_area_coll (C : multiset (convex_body V)) : Prop :=
 dim V = C.card + 2
 
+-- Schneider, Theorem 5.3.1
 lemma factorize_vol
 {C : multiset (convex_body V)}
 {D : multiset (convex_body V)}
@@ -92,16 +93,23 @@ lemma factorize_vol
 (hC : is_vol_coll C E)
 (hCD : is_vol_coll (C + D) F)
 (hEF : E ≤ F) :
-vol (C + D) = vol C * vol (proj_coll Eᗮ D) :=
+↑(nat.choose (dim V) (dim E)) * vol (C + D) =
+vol C * vol (proj_coll Eᗮ D) :=
 sorry
 
--- What happens if F is not ⊤?
+-- Can be deduced from an area analogue of Schneider, Theorem 5.3.1,
+-- using that Borel measures on the sphere are uniquely determined
+-- by their integrals of support functions of convex bodies.
+-- The statement was formulated in a weaker way, only yielding information
+-- about the supports, because converting measures on E to measures on V
+-- felt hard to formalize.
 lemma factorize_area
 {E : submodule ℝ V}
 {C : multiset (convex_body V)}
 {D : multiset (convex_body V)}
 (hC : is_vol_coll C E)
 (hCD : is_area_coll (C + D))
+-- hsc guarantees that the mixed volume of C is positive
 (hsc : semicritical_spaces (C.map span_of_convex_body)) :
 msupport (area (C + D)) = coe_sph Eᗮ '' msupport (area (proj_coll Eᗮ D)) :=
 sorry

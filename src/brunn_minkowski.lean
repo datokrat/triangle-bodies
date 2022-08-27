@@ -404,11 +404,29 @@ begin
   exact ne.is_unit cpos,
 end
 
+lemma convex_body.vspan_le_vspan_add_right
+(L : convex_body V)
+{K : convex_body V} :
+vector_span ℝ K.val ≤ vector_span ℝ (K + L).val :=
+begin
+  obtain ⟨l, hl⟩ := nonempty_convex_body L.property,
+  simp only [vector_span, subtype.val_eq_coe, convex_body.coe_add, submodule.span_le] at hl ⊢,
+  rintro - ⟨k₁, k₂, hk₁, hk₂, rfl⟩,
+  apply submodule.subset_span,
+  refine ⟨k₁ + l, k₂ + l, ⟨k₁, l, hk₁, hl, rfl⟩, ⟨k₂, l, hk₂, hl, rfl⟩, _⟩,
+  simp only [vsub_eq_sub, add_sub_add_right_eq_sub],
+end
+
 lemma convex_body.full_dimensional_add_right
 (L : convex_body V)
 {K : convex_body V}
 (hK : vector_span ℝ K.val = ⊤) :
-vector_span ℝ (K + L).val = ⊤ := sorry
+vector_span ℝ (K + L).val = ⊤ :=
+begin
+  apply le_antisymm le_top,
+  rw [←hK],
+  apply convex_body.vspan_le_vspan_add_right,
+end
 
 lemma convex_body.full_dimensional_add_left
 (L : convex_body V)
@@ -636,20 +654,54 @@ begin
 end
 
 -- MOVETO convex_body.lean
-noncomputable def convex_body.ball
-(x : V) (ε : ℝ) : convex_body V :=
-⟨metric.closed_ball x ε, sorry⟩
+def convex_body.ball
+(x : V) {ε : ℝ} (εnn : 0 ≤ ε) : convex_body V :=
+begin
+  refine ⟨metric.closed_ball x ε, _, _, _⟩,
+  {
+    apply convex_closed_ball,
+  },
+  {
+    apply proper_space.is_compact_closed_ball,
+  },
+  {
+    exact metric.nonempty_closed_ball.mpr εnn,
+  },
+end
 
 noncomputable def convex_body.unit_ball : convex_body V :=
-convex_body.ball 0 1
+convex_body.ball 0 zero_le_one
 
 lemma convex_body.full_dimensional_ball
 {x : V} {ε : ℝ} (εpos : 0 < ε) :
-vector_span ℝ (convex_body.ball x ε).val = ⊤ :=
-sorry
+vector_span ℝ (convex_body.ball x (le_of_lt εpos)).val = ⊤ :=
+begin
+  have : metric.ball (0 : V) ε ⊆ vector_span ℝ (metric.closed_ball x ε),
+  {
+    refine subset_trans metric.ball_subset_closed_ball _,
+    simp only [vector_span_def],
+    refine subset_trans _ submodule.subset_span,
+    intros y hy,
+    refine ⟨y + x, x, _, metric.mem_closed_ball_self (le_of_lt εpos), _⟩,
+    {
+      simpa only [mem_closed_ball_iff_norm, add_sub_cancel, sub_zero] using hy,
+    },
+    {
+      simp only [vsub_eq_sub, add_sub_cancel],
+    },
+  },
+  rw [←submodule.span_le] at this,
+  simp only [convex_body.ball],
+  apply le_antisymm le_top,
+  apply le_trans _ this,
+  replace := ball_spans_submodule ⊤ (0 : V) submodule.mem_top εpos,
+  simp only [submodule.top_coe, set.inter_univ] at this,
+  rw [this],
+  exact le_refl ⊤,
+end
 
 lemma convex_body.full_dimensional_unit_ball :
-vector_span ℝ (convex_body.ball (0 : V) 1).val = ⊤ :=
+vector_span ℝ (convex_body.unit_ball : convex_body V).val = ⊤ :=
 convex_body.full_dimensional_ball zero_lt_one
 
 -- This is tricky.

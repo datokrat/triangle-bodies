@@ -50,6 +50,12 @@ measure_theory.finite_measure (microid_generator_space V k)
 
 end types
 
+
+axiom microid_of_measure {V : Type}
+[inner_product_space ℝ V] [finite_dimensional ℝ V]
+{k : ℕ} (μ : microid_measure V k) :
+convex_body V
+
 section bla
 
 variables {V : Type} [inner_product_space ℝ V] [finite_dimensional ℝ V]
@@ -114,9 +120,6 @@ begin
   refl,
 end
 
-def microid_of_measure {k : ℕ} (μ : microid_measure V k) :
-convex_body V := sorry
-
 noncomputable def support_eval {k : ℕ} (u : V) :
 microid_generator_space V k → ℝ :=
 λ G, (body_of_microid_generator G).supp u
@@ -124,8 +127,8 @@ microid_generator_space V k → ℝ :=
 lemma supp_microid_eq_integral {k : ℕ} (μ : microid_measure V k) :
 (microid_of_measure μ).supp = (λ u, ∫ G, (body_of_microid_generator G).supp u ∂μ.val) := sorry
 
-lemma supp_microid_eq_integral' {k : ℕ} (μ : microid_measure V k) :
-(microid_of_measure μ).supp = (λ u, ∫ G in msupport μ, (body_of_microid_generator G).supp u ∂μ.val) := sorry
+/- lemma supp_microid_eq_integral' {k : ℕ} (μ : microid_measure V k) :
+(microid_of_measure μ).supp = (λ u, ∫ G in msupport μ, (body_of_microid_generator G).supp u ∂μ.val) := sorry -/
 
 lemma msupport_microid_eq_closure {k : ℕ}
 (μ : microid_measure V k)

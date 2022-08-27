@@ -50,7 +50,7 @@ def pair_to_measure {k : ℕ}
 {u : metric.sphere (0 : V) 1}
 (pair: microid_pair k u) : microid_measure V k := pair.1
 
-def pair_to_microid {k : ℕ}
+noncomputable def pair_to_microid {k : ℕ}
 {u : metric.sphere (0 : V) 1} :
 microid_pair k u → convex_body V :=
 microid_of_measure ∘ pair_to_measure

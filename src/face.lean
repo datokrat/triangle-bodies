@@ -1034,3 +1034,22 @@ begin
     },
   },
 end
+
+@[simp]
+lemma normal_face_singleton (x : V) (u : V) :
+normal_face {x} u = {x} :=
+begin
+  ext,
+  simp only [mem_normal_face, set.mem_singleton_iff, ge_iff_le, forall_eq, and_iff_left_iff_imp],
+  rintro rfl,
+  apply le_refl,
+end
+
+@[simp]
+lemma normal_face_zero (u : V) :
+normal_face 0 u = 0 :=
+begin
+  have : (0 : set V) = {0} := rfl,
+  rw [this],
+  apply normal_face_singleton,
+end
